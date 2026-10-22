@@ -9,6 +9,7 @@ import type {
   RateLimitEventLine,
   RateLimitWindows,
   ResultLine,
+  StreamEventLine,
   StreamLine,
   SystemInitLine,
   Usage,
@@ -37,6 +38,11 @@ export type ChatEntry =
   /** `id` is claude's request_id, which the answer must echo. */
   | { kind: "permission"; id: string; request: CanUseToolRequest; status: PermissionStatus };
 
+export interface Draft {
+  kind: "text" | "thinking";
+  text: string;
+}
+
 export type PermissionStatus = "pending" | "allowed" | "denied" | "cancelled";
 
 export interface ChatState {
@@ -49,6 +55,8 @@ export interface ChatState {
   /** claude's own session id, used to resume after the process restarts. */
   claudeSessionId: string | null;
   model: string | null;
+  /** The main-thread text or thinking block still streaming; replaced by its complete message. */
+  draft: Draft | null;
   /** Tokens in the context as of the latest main-thread response; null until known. */
   contextTokens: number | null;
   contextWindow: number | null;
@@ -70,7 +78,7 @@ export type ChatAction =
 /** A saved conversation, restored from history. */
 export type ChatSnapshot = Omit<
   ChatState,
-  "busy" | "contextTokens" | "contextWindow" | "rateLimits"
+  "busy" | "draft" | "contextTokens" | "contextWindow" | "rateLimits"
 >;
 
 export const initialChatState: ChatState = {
@@ -80,6 +88,7 @@ export const initialChatState: ChatState = {
   busy: false,
   claudeSessionId: null,
   model: null,
+  draft: null,
   contextTokens: null,
   contextWindow: null,
   rateLimits: null,
@@ -117,6 +126,7 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
       return {
         ...state,
         busy: false,
+        draft: null,
         entries: [...cancelPending(state.entries), notice(level, text)],
       };
     }
@@ -125,6 +135,7 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
       return {
         ...state,
         busy: false,
+        draft: null,
         entries: action.notice ? [...entries, notice("info", action.notice)] : entries,
       };
     }
@@ -132,6 +143,7 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
       return {
         ...state,
         busy: false,
+        draft: null,
         entries: [...cancelPending(state.entries), notice("error", action.text)],
       };
     case "permissionAnswered":
@@ -171,7 +183,17 @@ function applyLine(state: ChatState, line: StreamLine): ChatState {
         message.usage && parent_tool_use_id === null
           ? contextSize(message.usage)
           : state.contextTokens;
-      return { ...state, contextTokens, entries: [...state.entries, ...added] };
+      return {
+        ...state,
+        contextTokens,
+        draft: parent_tool_use_id === null ? null : state.draft,
+        entries: [...state.entries, ...added],
+      };
+    }
+    case "stream_event": {
+      const { event, parent_tool_use_id } = line as StreamEventLine;
+      if (parent_tool_use_id !== null) return state;
+      return { ...state, draft: applyStreamEvent(state.draft, event) };
     }
     case "control_request": {
       const { request_id, request } = line as ControlRequestLine;
@@ -211,6 +233,7 @@ function applyLine(state: ChatState, line: StreamLine): ChatState {
       return {
         ...state,
         busy: false,
+        draft: null,
         claudeSessionId: result.session_id,
         contextWindow: contextWindowOf(result, state.model) ?? state.contextWindow,
         entries: [
@@ -228,6 +251,30 @@ function applyLine(state: ChatState, line: StreamLine): ChatState {
     }
     default:
       return state;
+  }
+}
+
+type StreamEvent = StreamEventLine["event"];
+
+function applyStreamEvent(draft: Draft | null, event: StreamEvent): Draft | null {
+  switch (event.type) {
+    case "content_block_start": {
+      const { type } = (event as Extract<StreamEvent, { type: "content_block_start" }>).content_block;
+      return type === "text" || type === "thinking" ? { kind: type, text: "" } : null;
+    }
+    case "content_block_delta": {
+      const { delta } = event as Extract<StreamEvent, { type: "content_block_delta" }>;
+      if (!draft) return null;
+      if ("text" in delta) return { ...draft, text: draft.text + delta.text };
+      if ("thinking" in delta) return { ...draft, text: draft.text + delta.thinking };
+      return draft;
+    }
+    case "content_block_stop":
+    case "message_start":
+    case "message_stop":
+      return null;
+    default:
+      return draft;
   }
 }
 

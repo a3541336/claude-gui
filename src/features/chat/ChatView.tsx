@@ -6,19 +6,22 @@ interface Props {
   chat: ChatController;
   /** Non-null disables input and shows why. */
   disabledReason: string | null;
+  cwd: string | null;
 }
 
-export function ChatView({ chat, disabledReason }: Props) {
+export function ChatView({ chat, disabledReason, cwd }: Props) {
   return (
     <main className="chat">
       <MessageList
         entries={chat.state.entries}
+        draft={chat.state.draft}
         busy={chat.state.busy}
         onRespond={(requestId, response) => void chat.respond(requestId, response)}
       />
       <Composer
         busy={chat.state.busy}
         disabledReason={disabledReason}
+        cwd={cwd}
         onSend={(text) => void chat.send(text)}
         onStop={chat.stop}
       />

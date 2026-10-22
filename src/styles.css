@@ -605,8 +605,47 @@ pre {
   background: var(--surface);
 }
 
-.composer textarea {
+.composer__input {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.composer__files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.composer__file {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 0 0 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.composer .composer__file button {
+  padding: 0 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.composer textarea {
   resize: none;
   padding: 8px 10px;
   border: 1px solid var(--border);
@@ -619,6 +658,12 @@ pre {
   color: var(--accent-text);
   border-color: var(--accent);
   padding: 8px 16px;
+}
+
+.composer .composer__attach {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
 }
 
 .composer .composer__stop {

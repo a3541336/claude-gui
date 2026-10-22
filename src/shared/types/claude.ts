@@ -117,3 +117,17 @@ export type PermissionResponse =
       updatedPermissions?: PermissionSuggestion[];
     }
   | { behavior: "deny"; message: string };
+
+/** A raw API streaming event, sent with `--include-partial-messages`. */
+export interface StreamEventLine extends StreamLine {
+  type: "stream_event";
+  parent_tool_use_id: string | null;
+  event:
+    | { type: "message_start" | "message_stop" | "message_delta" | "content_block_stop" }
+    | { type: "content_block_start"; index: number; content_block: { type: string } }
+    | {
+        type: "content_block_delta";
+        index: number;
+        delta: { type: "text_delta"; text: string } | { type: "thinking_delta"; thinking: string } | { type: string };
+      };
+}

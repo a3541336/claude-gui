@@ -28,6 +28,8 @@ pub fn spawn(binary: &ClaudeBinary, opts: &SpawnOptions) -> std::io::Result<Chil
         "--output-format",
         "stream-json",
         "--verbose",
+        // Adds `stream_event` lines with text deltas ahead of each complete message.
+        "--include-partial-messages",
         // Permission prompts arrive on stdout as `control_request` lines and
         // are answered on stdin, instead of being denied automatically.
         "--permission-prompt-tool",

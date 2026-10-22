@@ -71,7 +71,7 @@ export default function App() {
           onNewChat={chat.newChat}
         />
         <ClaudeStatusBar claude={claude} />
-        <ChatView chat={chat} disabledReason={disabledReason} />
+        <ChatView chat={chat} disabledReason={disabledReason} cwd={workspace.cwd} />
         <UsageBar
           model={chat.state.model}
           contextTokens={chat.state.contextTokens}
