@@ -240,11 +240,6 @@ pre {
   direction: rtl; /* keep the end of long paths visible */
 }
 
-.workspace-bar__model {
-  color: var(--text-muted);
-  font-size: 12px;
-}
-
 /* Status bar */
 .status-bar {
   padding: 2px 12px;
@@ -462,8 +457,25 @@ pre {
   background: var(--error);
 }
 
+.usage-bar__model {
+  color: var(--text);
+}
+
 .usage-bar__percent {
   color: var(--text);
+}
+
+.workspace-settings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 2px max(16px, calc((100% - 860px) / 2)) 8px;
+  background: var(--surface);
+}
+
+.workspace-settings select {
+  padding: 1px 8px;
+  font-size: 12px;
 }
 
 /* Composer */

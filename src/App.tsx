@@ -6,6 +6,7 @@ import { HistorySidebar } from "./features/history/HistorySidebar";
 import { useHistory } from "./features/history/useHistory";
 import { UsageBar } from "./features/usage/UsageBar";
 import { WorkspaceBar } from "./features/workspace/WorkspaceBar";
+import { WorkspaceSettings } from "./features/workspace/WorkspaceSettings";
 import { useWorkspace } from "./features/workspace/useWorkspace";
 
 export default function App() {
@@ -66,17 +67,18 @@ export default function App() {
       <div className="app__main">
         <WorkspaceBar
           workspace={workspace}
-          activeModel={chat.state.model}
           onChangeCwd={changeCwd}
           onNewChat={chat.newChat}
         />
         <ClaudeStatusBar claude={claude} />
         <ChatView chat={chat} disabledReason={disabledReason} />
         <UsageBar
+          model={chat.state.model}
           contextTokens={chat.state.contextTokens}
           contextWindow={chat.state.contextWindow}
           rateLimits={chat.state.rateLimits}
         />
+        <WorkspaceSettings workspace={workspace} />
       </div>
     </div>
   );

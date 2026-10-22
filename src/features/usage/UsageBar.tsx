@@ -1,15 +1,20 @@
 import type { ChatState } from "../chat/chatReducer";
 import type { RateLimitWindow } from "../../shared/types/claude";
 
-type Props = Pick<ChatState, "contextTokens" | "contextWindow" | "rateLimits">;
+type Props = Pick<ChatState, "model" | "contextTokens" | "contextWindow" | "rateLimits">;
 
-/** Context window fill and subscription usage (5-hour and 7-day windows). */
-export function UsageBar({ contextTokens, contextWindow, rateLimits }: Props) {
+/** Model in use, context window fill and subscription usage (5-hour and 7-day windows). */
+export function UsageBar({ model, contextTokens, contextWindow, rateLimits }: Props) {
   const fiveHour = current(rateLimits?.five_hour);
   const sevenDay = current(rateLimits?.seven_day);
 
   return (
     <footer className="usage-bar">
+      {model && (
+        <span className="usage-bar__item usage-bar__model" title="claude 回報的目前模型">
+          {model}
+        </span>
+      )}
       <span className="usage-bar__item" title="目前對話佔用的上下文">
         上下文
         {contextTokens === null ? (
