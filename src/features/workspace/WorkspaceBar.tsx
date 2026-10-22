@@ -5,15 +5,16 @@ import { PERMISSION_MODES, type WorkspaceController } from "./useWorkspace";
 interface Props {
   workspace: WorkspaceController;
   model: string | null;
+  onChangeCwd: (cwd: string) => void;
   onNewChat: () => void;
 }
 
-export function WorkspaceBar({ workspace, model, onNewChat }: Props) {
-  const { cwd, setCwd, permissionMode, setPermissionMode } = workspace;
+export function WorkspaceBar({ workspace, model, onChangeCwd, onNewChat }: Props) {
+  const { cwd, permissionMode, setPermissionMode } = workspace;
 
   const pickDirectory = async () => {
     const dir = await open({ directory: true, multiple: false, title: "選擇工作目錄" });
-    if (typeof dir === "string") setCwd(dir);
+    if (typeof dir === "string") onChangeCwd(dir);
   };
 
   return (

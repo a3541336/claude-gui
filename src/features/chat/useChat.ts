@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useReducer, useRef } from "react";
 import { claudeApi } from "../../shared/api/claude";
 import type { PermissionMode } from "../../shared/types/claude";
-import { chatReducer, initialChatState } from "./chatReducer";
+import { chatReducer, initialChatState, type ChatSnapshot } from "./chatReducer";
 
 interface Options {
   cwd: string | null;
@@ -11,6 +11,8 @@ interface Options {
 /**
  * Owns one claude process at a time. The process is started lazily on the
  * first message and restarted with `--resume` after a stop or setting change.
+ * Changing `cwd` does not reset the conversation; callers pair it with
+ * `newChat` or `load`.
  */
 export function useChat({ cwd, permissionMode }: Options) {
   const [state, dispatch] = useReducer(chatReducer, initialChatState);
@@ -43,12 +45,6 @@ export function useChat({ cwd, permissionMode }: Options) {
     if (id) void claudeApi.stopSession(id);
     return id !== null;
   }, []);
-
-  // A different directory is a different project, so start over.
-  useEffect(() => {
-    detach();
-    dispatch({ type: "reset" });
-  }, [cwd, detach]);
 
   // A new permission mode needs a new process; the conversation resumes.
   const firstMode = useRef(true);
@@ -101,7 +97,16 @@ export function useChat({ cwd, permissionMode }: Options) {
     dispatch({ type: "reset" });
   }, [detach]);
 
-  return { state, send, stop, newChat };
+  /** Replaces the current conversation; the next message resumes it. */
+  const load = useCallback(
+    (snapshot: ChatSnapshot) => {
+      detach();
+      dispatch({ type: "load", snapshot });
+    },
+    [detach],
+  );
+
+  return { state, send, stop, newChat, load };
 }
 
 export type ChatController = ReturnType<typeof useChat>;

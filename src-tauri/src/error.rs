@@ -12,6 +12,8 @@ pub enum AppError {
     SessionNotFound(String),
     #[error("工作階段已存在：{0}")]
     SessionExists(String),
+    #[error("無效的對話紀錄 id：{0}")]
+    InvalidHistoryId(String),
     #[error(transparent)]
     Io(#[from] std::io::Error),
     #[error(transparent)]

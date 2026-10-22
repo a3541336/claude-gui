@@ -1,0 +1,96 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import { historyApi, type ConversationMeta } from "../../shared/api/history";
+import type { ChatEntry, ChatSnapshot, ChatState } from "../chat/chatReducer";
+
+export type { ConversationMeta };
+
+/** Saved conversations, persisted to files by the backend. */
+export function useHistory(chat: ChatState, cwd: string | null) {
+  const [items, setItems] = useState<ConversationMeta[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  // Backend calls run one at a time, so an older save never lands after a
+  // newer one and a load always sees the latest save.
+  const queue = useRef<Promise<unknown>>(Promise.resolve());
+  const serial = useCallback(<T>(task: () => Promise<T>): Promise<T> => {
+    const result = queue.current.then(task);
+    queue.current = result.catch(() => undefined);
+    return result;
+  }, []);
+
+  useEffect(() => {
+    serial(historyApi.list).then(
+      // Conversations saved before the list arrived are newer than the disk copy.
+      (saved) =>
+        setItems((prev) =>
+          sortItems([...prev, ...saved.filter((s) => !prev.some((p) => p.id === s.id))]),
+        ),
+      (e) => setError(String(e)),
+    );
+  }, [serial]);
+
+  // Save the current conversation whenever it changes.
+  const { conversationId, updatedAt, entries, claudeSessionId, model } = chat;
+  useEffect(() => {
+    if (!conversationId || updatedAt === null || !cwd || entries.length === 0) return;
+    const meta: ConversationMeta = {
+      id: conversationId,
+      title: titleOf(entries),
+      cwd,
+      updatedAt,
+      claudeSessionId,
+      model,
+    };
+    setItems((prev) => sortItems([meta, ...prev.filter((item) => item.id !== meta.id)]));
+    serial(() => historyApi.save(meta, entries)).then(
+      () => setError(null),
+      (e) => setError(`對話紀錄儲存失敗：${e}`),
+    );
+  }, [conversationId, updatedAt, entries, claudeSessionId, model, cwd, serial]);
+
+  const load = useCallback(
+    async (id: string): Promise<{ cwd: string; snapshot: ChatSnapshot } | null> => {
+      const meta = items.find((item) => item.id === id);
+      if (!meta) return null;
+      try {
+        const saved = await serial(() => historyApi.load<ChatEntry[]>(id));
+        return {
+          cwd: meta.cwd,
+          snapshot: {
+            conversationId: meta.id,
+            updatedAt: meta.updatedAt,
+            entries: saved,
+            claudeSessionId: meta.claudeSessionId,
+            model: meta.model,
+          },
+        };
+      } catch (e) {
+        setError(`對話紀錄讀取失敗：${e}`);
+        return null;
+      }
+    },
+    [items, serial],
+  );
+
+  const remove = useCallback(
+    (id: string) => {
+      setItems((prev) => prev.filter((item) => item.id !== id));
+      serial(() => historyApi.delete(id)).catch((e) => setError(`對話紀錄刪除失敗：${e}`));
+    },
+    [serial],
+  );
+
+  return { items, error, load, remove };
+}
+
+function sortItems(items: ConversationMeta[]): ConversationMeta[] {
+  return items.sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+function titleOf(entries: ChatEntry[]): string {
+  const first = entries.find((e) => e.kind === "user");
+  const line = first?.text.trim().split("\n")[0] ?? "";
+  return line.length > 60 ? `${line.slice(0, 60)}…` : line || "（無標題）";
+}
+
+export type HistoryController = ReturnType<typeof useHistory>;

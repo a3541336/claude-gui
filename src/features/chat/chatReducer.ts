@@ -30,6 +30,10 @@ export type ChatEntry =
   | { kind: "notice"; id: string; level: "info" | "error"; text: string };
 
 export interface ChatState {
+  /** Local id under which the conversation is saved to history; set on the first message. */
+  conversationId: string | null;
+  /** Time of the last user message, in ms. */
+  updatedAt: number | null;
   entries: ChatEntry[];
   busy: boolean;
   /** claude's own session id, used to resume after the process restarts. */
@@ -44,9 +48,15 @@ export type ChatAction =
   | { type: "exited"; code: number | null }
   | { type: "detached"; notice?: string }
   | { type: "error"; text: string }
-  | { type: "reset" };
+  | { type: "reset" }
+  | { type: "load"; snapshot: ChatSnapshot };
+
+/** A saved conversation, restored from history. */
+export type ChatSnapshot = Omit<ChatState, "busy">;
 
 export const initialChatState: ChatState = {
+  conversationId: null,
+  updatedAt: null,
   entries: [],
   busy: false,
   claudeSessionId: null,
@@ -67,6 +77,8 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
     case "userSent":
       return {
         ...state,
+        conversationId: state.conversationId ?? newId(),
+        updatedAt: Date.now(),
         busy: true,
         entries: [...state.entries, { kind: "user", id: newId(), text: action.text }],
       };
@@ -92,6 +104,8 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
       return { ...state, busy: false, entries: [...state.entries, notice("error", action.text)] };
     case "reset":
       return initialChatState;
+    case "load":
+      return { ...action.snapshot, busy: false };
   }
 }
 

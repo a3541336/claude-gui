@@ -84,8 +84,140 @@ pre {
 
 .app {
   display: flex;
-  flex-direction: column;
   height: 100%;
+}
+
+.app__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* History sidebar */
+.history {
+  width: 260px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  border-right: 1px solid var(--border);
+  background: var(--surface-muted);
+  font-size: 13px;
+}
+
+.history__header {
+  padding: 10px 12px;
+  font-weight: 600;
+}
+
+.history__empty {
+  margin: 0;
+  padding: 0 12px;
+  color: var(--text-muted);
+}
+
+.history__error {
+  margin: 0 0 8px;
+  padding: 0 12px;
+  color: var(--error);
+  overflow-wrap: anywhere;
+}
+
+.history__group {
+  margin-bottom: 8px;
+}
+
+.history__group ul {
+  list-style: none;
+  margin: 0;
+  padding: 0 6px;
+}
+
+.history__dir {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  column-gap: 4px;
+  padding: 4px 6px 4px 12px;
+  color: var(--text-muted);
+}
+
+.history__dir--current .history__dir-name {
+  color: var(--accent);
+}
+
+.history__dir-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history__dir-path {
+  grid-column: 1;
+  grid-row: 2;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl; /* keep the end of long paths visible */
+  text-align: left;
+}
+
+.history__dir .history__icon-button {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
+.history__icon-button {
+  padding: 0 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.history__icon-button:hover {
+  color: var(--text);
+  background: var(--border);
+}
+
+.history__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 10px;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.history__item:hover {
+  background: var(--border);
+}
+
+.history__item--active {
+  background: var(--surface);
+}
+
+.history__title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history__time {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.history__delete {
+  visibility: hidden;
+}
+
+.history__item:hover .history__delete {
+  visibility: visible;
 }
 
 /* Workspace bar */
