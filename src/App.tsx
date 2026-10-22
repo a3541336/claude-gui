@@ -10,7 +10,11 @@ import { useWorkspace } from "./features/workspace/useWorkspace";
 export default function App() {
   const claude = useClaudeStatus();
   const workspace = useWorkspace();
-  const chat = useChat({ cwd: workspace.cwd, permissionMode: workspace.permissionMode });
+  const chat = useChat({
+    cwd: workspace.cwd,
+    permissionMode: workspace.permissionMode,
+    model: workspace.model,
+  });
   const history = useHistory(chat.state, workspace.cwd);
 
   const disabledReason =
@@ -61,7 +65,7 @@ export default function App() {
       <div className="app__main">
         <WorkspaceBar
           workspace={workspace}
-          model={chat.state.model}
+          activeModel={chat.state.model}
           onChangeCwd={changeCwd}
           onNewChat={chat.newChat}
         />

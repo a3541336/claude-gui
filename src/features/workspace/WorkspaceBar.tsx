@@ -1,16 +1,17 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import type { PermissionMode } from "../../shared/types/claude";
-import { PERMISSION_MODES, type WorkspaceController } from "./useWorkspace";
+import { MODELS, PERMISSION_MODES, type WorkspaceController } from "./useWorkspace";
 
 interface Props {
   workspace: WorkspaceController;
-  model: string | null;
+  /** Model reported by the running claude process. */
+  activeModel: string | null;
   onChangeCwd: (cwd: string) => void;
   onNewChat: () => void;
 }
 
-export function WorkspaceBar({ workspace, model, onChangeCwd, onNewChat }: Props) {
-  const { cwd, permissionMode, setPermissionMode } = workspace;
+export function WorkspaceBar({ workspace, activeModel, onChangeCwd, onNewChat }: Props) {
+  const { cwd, permissionMode, setPermissionMode, model, setModel } = workspace;
 
   const pickDirectory = async () => {
     const dir = await open({ directory: true, multiple: false, title: "選擇工作目錄" });
@@ -32,7 +33,14 @@ export function WorkspaceBar({ workspace, model, onChangeCwd, onNewChat }: Props
           </option>
         ))}
       </select>
-      {model && <span className="workspace-bar__model">{model}</span>}
+      <select value={model} onChange={(e) => setModel(e.target.value)}>
+        {MODELS.map((m) => (
+          <option key={m.value} value={m.value}>
+            {m.label}
+          </option>
+        ))}
+      </select>
+      {activeModel && <span className="workspace-bar__model">{activeModel}</span>}
       <button onClick={onNewChat}>新對話</button>
     </header>
   );

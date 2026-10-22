@@ -6,6 +6,8 @@ import { chatReducer, initialChatState, type ChatSnapshot } from "./chatReducer"
 interface Options {
   cwd: string | null;
   permissionMode: PermissionMode;
+  /** `--model` value; empty uses claude's default. */
+  model: string;
 }
 
 /**
@@ -14,7 +16,7 @@ interface Options {
  * Changing `cwd` does not reset the conversation; callers pair it with
  * `newChat` or `load`.
  */
-export function useChat({ cwd, permissionMode }: Options) {
+export function useChat({ cwd, permissionMode, model }: Options) {
   const [state, dispatch] = useReducer(chatReducer, initialChatState);
   // Events from any other (e.g. just-stopped) process are ignored.
   const sessionRef = useRef<string | null>(null);
@@ -46,15 +48,15 @@ export function useChat({ cwd, permissionMode }: Options) {
     return id !== null;
   }, []);
 
-  // A new permission mode needs a new process; the conversation resumes.
-  const firstMode = useRef(true);
+  // New settings need a new process; the conversation resumes.
+  const firstSettings = useRef(true);
   useEffect(() => {
-    if (firstMode.current) {
-      firstMode.current = false;
+    if (firstSettings.current) {
+      firstSettings.current = false;
       return;
     }
-    if (detach()) dispatch({ type: "detached", notice: "權限模式已變更，下次送出時套用" });
-  }, [permissionMode, detach]);
+    if (detach()) dispatch({ type: "detached", notice: "設定已變更，下次送出時套用" });
+  }, [permissionMode, model, detach]);
 
   useEffect(
     () => () => {
@@ -75,6 +77,7 @@ export function useChat({ cwd, permissionMode }: Options) {
           await claudeApi.startSession(id, {
             cwd,
             permissionMode,
+            model: model || undefined,
             resume: state.claudeSessionId ?? undefined,
           });
         }
@@ -84,7 +87,7 @@ export function useChat({ cwd, permissionMode }: Options) {
         dispatch({ type: "error", text: String(e) });
       }
     },
-    [cwd, permissionMode, state.claudeSessionId, detach],
+    [cwd, permissionMode, model, state.claudeSessionId, detach],
   );
 
   const stop = useCallback(() => {
