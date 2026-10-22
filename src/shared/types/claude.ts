@@ -28,9 +28,16 @@ export interface SystemInitLine extends StreamLine {
   cwd: string;
 }
 
+export interface Usage {
+  input_tokens: number;
+  output_tokens: number;
+  cache_creation_input_tokens?: number;
+  cache_read_input_tokens?: number;
+}
+
 export interface AssistantLine extends StreamLine {
   type: "assistant";
-  message: { content: ContentBlock[] };
+  message: { content: ContentBlock[]; usage?: Usage };
   parent_tool_use_id: string | null;
 }
 
@@ -49,4 +56,25 @@ export interface ResultLine extends StreamLine {
   total_cost_usd?: number;
   duration_ms?: number;
   num_turns?: number;
+  /** Keyed by model id. */
+  modelUsage?: Record<string, { contextWindow?: number }>;
+}
+
+/** Subscription usage window. */
+export interface RateLimitWindow {
+  /** Fraction used, usually 0-1; can exceed 1. */
+  utilization: number;
+  /** Unix epoch seconds. */
+  resetsAt: number;
+}
+
+export interface RateLimitWindows {
+  five_hour?: RateLimitWindow;
+  seven_day?: RateLimitWindow;
+}
+
+/** Absent for API-key, Bedrock and Vertex sessions. */
+export interface RateLimitEventLine extends StreamLine {
+  type: "rate_limit_event";
+  rate_limit_info: { unifiedWindows?: RateLimitWindows };
 }

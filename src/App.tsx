@@ -4,6 +4,7 @@ import { ClaudeStatusBar } from "./features/claude-status/ClaudeStatusBar";
 import { useClaudeStatus } from "./features/claude-status/useClaudeStatus";
 import { HistorySidebar } from "./features/history/HistorySidebar";
 import { useHistory } from "./features/history/useHistory";
+import { UsageBar } from "./features/usage/UsageBar";
 import { WorkspaceBar } from "./features/workspace/WorkspaceBar";
 import { useWorkspace } from "./features/workspace/useWorkspace";
 
@@ -71,6 +72,11 @@ export default function App() {
         />
         <ClaudeStatusBar claude={claude} />
         <ChatView chat={chat} disabledReason={disabledReason} />
+        <UsageBar
+          contextTokens={chat.state.contextTokens}
+          contextWindow={chat.state.contextWindow}
+          rateLimits={chat.state.rateLimits}
+        />
       </div>
     </div>
   );

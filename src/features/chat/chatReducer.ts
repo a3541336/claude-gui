@@ -3,9 +3,12 @@
 import type {
   AssistantLine,
   ContentBlock,
+  RateLimitEventLine,
+  RateLimitWindows,
   ResultLine,
   StreamLine,
   SystemInitLine,
+  Usage,
   UserLine,
 } from "../../shared/types/claude";
 
@@ -39,6 +42,11 @@ export interface ChatState {
   /** claude's own session id, used to resume after the process restarts. */
   claudeSessionId: string | null;
   model: string | null;
+  /** Tokens in the context as of the latest main-thread response; null until known. */
+  contextTokens: number | null;
+  contextWindow: number | null;
+  /** Account-wide, so it survives switching conversations. */
+  rateLimits: RateLimitWindows | null;
 }
 
 export type ChatAction =
@@ -52,7 +60,10 @@ export type ChatAction =
   | { type: "load"; snapshot: ChatSnapshot };
 
 /** A saved conversation, restored from history. */
-export type ChatSnapshot = Omit<ChatState, "busy">;
+export type ChatSnapshot = Omit<
+  ChatState,
+  "busy" | "contextTokens" | "contextWindow" | "rateLimits"
+>;
 
 export const initialChatState: ChatState = {
   conversationId: null,
@@ -61,6 +72,9 @@ export const initialChatState: ChatState = {
   busy: false,
   claudeSessionId: null,
   model: null,
+  contextTokens: null,
+  contextWindow: null,
+  rateLimits: null,
 };
 
 const newId = () => crypto.randomUUID();
@@ -103,9 +117,9 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
     case "error":
       return { ...state, busy: false, entries: [...state.entries, notice("error", action.text)] };
     case "reset":
-      return initialChatState;
+      return { ...initialChatState, rateLimits: state.rateLimits };
     case "load":
-      return { ...action.snapshot, busy: false };
+      return { ...initialChatState, ...action.snapshot, rateLimits: state.rateLimits };
   }
 }
 
@@ -117,9 +131,18 @@ function applyLine(state: ChatState, line: StreamLine): ChatState {
       return { ...state, claudeSessionId: init.session_id, model: init.model };
     }
     case "assistant": {
-      const { message } = line as AssistantLine;
+      const { message, parent_tool_use_id } = line as AssistantLine;
       const added = message.content.flatMap(blockToEntry);
-      return { ...state, entries: [...state.entries, ...added] };
+      // Subagents run in their own context.
+      const contextTokens =
+        message.usage && parent_tool_use_id === null
+          ? contextSize(message.usage)
+          : state.contextTokens;
+      return { ...state, contextTokens, entries: [...state.entries, ...added] };
+    }
+    case "rate_limit_event": {
+      const windows = (line as RateLimitEventLine).rate_limit_info.unifiedWindows;
+      return windows ? { ...state, rateLimits: windows } : state;
     }
     case "user": {
       const { message } = line as UserLine;
@@ -136,6 +159,7 @@ function applyLine(state: ChatState, line: StreamLine): ChatState {
         ...state,
         busy: false,
         claudeSessionId: result.session_id,
+        contextWindow: contextWindowOf(result, state.model) ?? state.contextWindow,
         entries: [
           ...state.entries,
           {
@@ -152,6 +176,24 @@ function applyLine(state: ChatState, line: StreamLine): ChatState {
     default:
       return state;
   }
+}
+
+function contextSize(usage: Usage): number {
+  return (
+    usage.input_tokens +
+    (usage.cache_creation_input_tokens ?? 0) +
+    (usage.cache_read_input_tokens ?? 0) +
+    usage.output_tokens
+  );
+}
+
+/** The main model's window; other entries may be subagents on smaller models. */
+function contextWindowOf(result: ResultLine, model: string | null): number | null {
+  const usage = result.modelUsage ?? {};
+  const own = model ? usage[model]?.contextWindow : undefined;
+  if (own) return own;
+  const windows = Object.values(usage).flatMap((u) => (u.contextWindow ? [u.contextWindow] : []));
+  return windows.length > 0 ? Math.max(...windows) : null;
 }
 
 function blockToEntry(block: ContentBlock): ChatEntry[] {
