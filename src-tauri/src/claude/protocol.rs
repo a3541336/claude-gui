@@ -2,6 +2,7 @@
 //! Output lines are forwarded to the frontend untouched, which owns their types.
 
 use serde::Serialize;
+use serde_json::Value;
 
 #[derive(Serialize)]
 pub struct UserInput<'a> {
@@ -27,10 +28,47 @@ impl<'a> UserInput<'a> {
         }
     }
 
-    /// Serialized as one newline-terminated JSON line.
     pub fn to_line(&self) -> serde_json::Result<Vec<u8>> {
-        let mut line = serde_json::to_vec(self)?;
-        line.push(b'\n');
-        Ok(line)
+        to_line(self)
     }
+}
+
+/// Answer to a `control_request`, such as a `can_use_tool` permission prompt.
+#[derive(Serialize)]
+pub struct ControlResponse<'a> {
+    #[serde(rename = "type")]
+    kind: &'static str,
+    response: ControlResponseBody<'a>,
+}
+
+#[derive(Serialize)]
+struct ControlResponseBody<'a> {
+    subtype: &'static str,
+    request_id: &'a str,
+    /// Shaped by the request type; the frontend builds it.
+    response: &'a Value,
+}
+
+impl<'a> ControlResponse<'a> {
+    pub fn success(request_id: &'a str, response: &'a Value) -> Self {
+        Self {
+            kind: "control_response",
+            response: ControlResponseBody {
+                subtype: "success",
+                request_id,
+                response,
+            },
+        }
+    }
+
+    pub fn to_line(&self) -> serde_json::Result<Vec<u8>> {
+        to_line(self)
+    }
+}
+
+/// Serialized as one newline-terminated JSON line.
+fn to_line<T: Serialize>(value: &T) -> serde_json::Result<Vec<u8>> {
+    let mut line = serde_json::to_vec(value)?;
+    line.push(b'\n');
+    Ok(line)
 }

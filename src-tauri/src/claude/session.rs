@@ -11,7 +11,7 @@ use tokio::sync::Mutex;
 
 use super::locator::ClaudeBinary;
 use super::process::{self, SpawnOptions};
-use super::protocol::UserInput;
+use super::protocol::{ControlResponse, UserInput};
 use crate::error::{AppError, AppResult};
 use crate::events::{self, ExitPayload, MessagePayload, StderrPayload};
 
@@ -56,14 +56,20 @@ impl SessionManager {
     }
 
     pub async fn send(&self, id: &str, text: &str) -> AppResult<()> {
+        self.write_line(id, &UserInput::text(text).to_line()?).await
+    }
+
+    pub async fn respond(&self, id: &str, request_id: &str, response: &Value) -> AppResult<()> {
+        let line = ControlResponse::success(request_id, response).to_line()?;
+        self.write_line(id, &line).await
+    }
+
+    async fn write_line(&self, id: &str, line: &[u8]) -> AppResult<()> {
         let mut sessions = self.sessions.lock().await;
         let session = sessions
             .get_mut(id)
             .ok_or_else(|| AppError::SessionNotFound(id.to_string()))?;
-        session
-            .stdin
-            .write_all(&UserInput::text(text).to_line()?)
-            .await?;
+        session.stdin.write_all(line).await?;
         session.stdin.flush().await?;
         Ok(())
     }

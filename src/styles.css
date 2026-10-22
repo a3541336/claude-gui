@@ -385,6 +385,123 @@ pre {
   white-space: pre-wrap;
 }
 
+.permission {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.permission:not(.permission--pending) {
+  border-color: var(--border);
+  opacity: 0.75;
+}
+
+.permission__summary {
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: var(--surface-muted);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.permission__reason,
+.permission__status {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.permission details summary {
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.permission details pre {
+  margin: 4px 0 0;
+  padding: 8px 10px;
+  background: var(--surface-muted);
+  border-radius: 4px;
+  white-space: pre-wrap;
+  max-height: 240px;
+  overflow: auto;
+}
+
+.permission__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.permission__primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.question {
+  margin: 0;
+  padding: 0;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.question legend {
+  padding: 0;
+  margin-bottom: 6px;
+}
+
+.question__header {
+  margin-right: 6px;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  background: var(--surface-muted);
+  color: var(--text-muted);
+}
+
+.question__hint {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.question__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.question__option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.question__option[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--user-bubble);
+}
+
+.question__description {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.question__other {
+  font: inherit;
+  color: inherit;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
 .markdown > :first-child {
   margin-top: 0;
 }

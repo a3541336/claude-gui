@@ -27,7 +27,7 @@ export function ToolBlock({ entry }: { entry: ToolEntry }) {
 }
 
 /** A one-line description of the most relevant input field per tool. */
-function summarizeInput(name: string, input: Record<string, unknown>): string {
+export function summarizeInput(name: string, input: Record<string, unknown>): string {
   const field = (key: string) => (typeof input[key] === "string" ? (input[key] as string) : "");
   switch (name) {
     case "Bash":

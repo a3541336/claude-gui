@@ -24,6 +24,7 @@ pub fn run() {
             commands::system::set_claude_path,
             commands::session::start_session,
             commands::session::send_message,
+            commands::session::respond_to_request,
             commands::session::stop_session,
             commands::history::list_history,
             commands::history::save_history,

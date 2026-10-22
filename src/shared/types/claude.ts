@@ -78,3 +78,42 @@ export interface RateLimitEventLine extends StreamLine {
   type: "rate_limit_event";
   rate_limit_info: { unifiedWindows?: RateLimitWindows };
 }
+
+/** A permission rule change claude offers alongside a prompt. */
+export interface PermissionSuggestion {
+  type: string;
+  [key: string]: unknown;
+}
+
+export interface CanUseToolRequest {
+  subtype: "can_use_tool";
+  tool_name: string;
+  display_name?: string;
+  input: Record<string, unknown>;
+  description?: string;
+  /** Why claude is asking, when it isn't simply the permission mode. */
+  decision_reason?: string;
+  permission_suggestions?: PermissionSuggestion[];
+  tool_use_id?: string;
+}
+
+/** Sent with `--permission-prompt-tool stdio`; claude waits for a `control_response`. */
+export interface ControlRequestLine extends StreamLine {
+  type: "control_request";
+  request_id: string;
+  request: CanUseToolRequest | { subtype: string };
+}
+
+/** claude no longer needs the answer, e.g. after an interrupt. */
+export interface ControlCancelRequestLine extends StreamLine {
+  type: "control_cancel_request";
+  request_id: string;
+}
+
+export type PermissionResponse =
+  | {
+      behavior: "allow";
+      updatedInput?: Record<string, unknown>;
+      updatedPermissions?: PermissionSuggestion[];
+    }
+  | { behavior: "deny"; message: string };

@@ -28,6 +28,10 @@ pub fn spawn(binary: &ClaudeBinary, opts: &SpawnOptions) -> std::io::Result<Chil
         "--output-format",
         "stream-json",
         "--verbose",
+        // Permission prompts arrive on stdout as `control_request` lines and
+        // are answered on stdin, instead of being denied automatically.
+        "--permission-prompt-tool",
+        "stdio",
     ]);
     if let Some(mode) = &opts.permission_mode {
         cmd.args(["--permission-mode", mode]);

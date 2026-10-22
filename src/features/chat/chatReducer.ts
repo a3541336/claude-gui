@@ -2,7 +2,10 @@
 
 import type {
   AssistantLine,
+  CanUseToolRequest,
   ContentBlock,
+  ControlCancelRequestLine,
+  ControlRequestLine,
   RateLimitEventLine,
   RateLimitWindows,
   ResultLine,
@@ -30,7 +33,11 @@ export type ChatEntry =
       durationMs?: number;
       numTurns?: number;
     }
-  | { kind: "notice"; id: string; level: "info" | "error"; text: string };
+  | { kind: "notice"; id: string; level: "info" | "error"; text: string }
+  /** `id` is claude's request_id, which the answer must echo. */
+  | { kind: "permission"; id: string; request: CanUseToolRequest; status: PermissionStatus };
+
+export type PermissionStatus = "pending" | "allowed" | "denied" | "cancelled";
 
 export interface ChatState {
   /** Local id under which the conversation is saved to history; set on the first message. */
@@ -56,6 +63,7 @@ export type ChatAction =
   | { type: "exited"; code: number | null }
   | { type: "detached"; notice?: string }
   | { type: "error"; text: string }
+  | { type: "permissionAnswered"; requestId: string; allowed: boolean }
   | { type: "reset" }
   | { type: "load"; snapshot: ChatSnapshot };
 
@@ -106,20 +114,45 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
           ? "已中斷，下次送出訊息時會接續這段對話"
           : `claude 已結束（代碼 ${action.code}）`;
       const level = action.code === null || action.code === 0 ? "info" : "error";
-      return { ...state, busy: false, entries: [...state.entries, notice(level, text)] };
-    }
-    case "detached":
       return {
         ...state,
         busy: false,
-        entries: action.notice ? [...state.entries, notice("info", action.notice)] : state.entries,
+        entries: [...cancelPending(state.entries), notice(level, text)],
       };
+    }
+    case "detached": {
+      const entries = cancelPending(state.entries);
+      return {
+        ...state,
+        busy: false,
+        entries: action.notice ? [...entries, notice("info", action.notice)] : entries,
+      };
+    }
     case "error":
-      return { ...state, busy: false, entries: [...state.entries, notice("error", action.text)] };
+      return {
+        ...state,
+        busy: false,
+        entries: [...cancelPending(state.entries), notice("error", action.text)],
+      };
+    case "permissionAnswered":
+      return {
+        ...state,
+        entries: setPermissionStatus(
+          state.entries,
+          action.requestId,
+          action.allowed ? "allowed" : "denied",
+        ),
+      };
     case "reset":
       return { ...initialChatState, rateLimits: state.rateLimits };
     case "load":
-      return { ...initialChatState, ...action.snapshot, rateLimits: state.rateLimits };
+      // The process that asked is gone, so saved prompts can't be answered.
+      return {
+        ...initialChatState,
+        ...action.snapshot,
+        entries: cancelPending(action.snapshot.entries),
+        rateLimits: state.rateLimits,
+      };
   }
 }
 
@@ -139,6 +172,26 @@ function applyLine(state: ChatState, line: StreamLine): ChatState {
           ? contextSize(message.usage)
           : state.contextTokens;
       return { ...state, contextTokens, entries: [...state.entries, ...added] };
+    }
+    case "control_request": {
+      const { request_id, request } = line as ControlRequestLine;
+      if (request.subtype !== "can_use_tool") {
+        return {
+          ...state,
+          entries: [...state.entries, notice("error", `不支援的 claude 請求：${request.subtype}`)],
+        };
+      }
+      const entry: ChatEntry = {
+        kind: "permission",
+        id: request_id,
+        request: request as CanUseToolRequest,
+        status: "pending",
+      };
+      return { ...state, entries: [...state.entries, entry] };
+    }
+    case "control_cancel_request": {
+      const { request_id } = line as ControlCancelRequestLine;
+      return { ...state, entries: setPermissionStatus(state.entries, request_id, "cancelled") };
     }
     case "rate_limit_event": {
       const windows = (line as RateLimitEventLine).rate_limit_info.unifiedWindows;
@@ -176,6 +229,24 @@ function applyLine(state: ChatState, line: StreamLine): ChatState {
     default:
       return state;
   }
+}
+
+function setPermissionStatus(
+  entries: ChatEntry[],
+  requestId: string,
+  status: PermissionStatus,
+): ChatEntry[] {
+  return entries.map((e) =>
+    e.kind === "permission" && e.id === requestId && e.status === "pending" ? { ...e, status } : e,
+  );
+}
+
+function cancelPending(entries: ChatEntry[]): ChatEntry[] {
+  return entries.some((e) => e.kind === "permission" && e.status === "pending")
+    ? entries.map((e) =>
+        e.kind === "permission" && e.status === "pending" ? { ...e, status: "cancelled" } : e,
+      )
+    : entries;
 }
 
 function contextSize(usage: Usage): number {

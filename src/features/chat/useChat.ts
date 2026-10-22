@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useReducer, useRef } from "react";
 import { claudeApi } from "../../shared/api/claude";
-import type { PermissionMode } from "../../shared/types/claude";
+import type { PermissionMode, PermissionResponse } from "../../shared/types/claude";
 import { chatReducer, initialChatState, type ChatSnapshot } from "./chatReducer";
 
 interface Options {
@@ -95,6 +95,18 @@ export function useChat({ cwd, permissionMode, model }: Options) {
     if (id) void claudeApi.stopSession(id);
   }, []);
 
+  /** Answers a permission prompt from the running process. */
+  const respond = useCallback(async (requestId: string, response: PermissionResponse) => {
+    const id = sessionRef.current;
+    if (!id) return;
+    dispatch({ type: "permissionAnswered", requestId, allowed: response.behavior === "allow" });
+    try {
+      await claudeApi.respondToRequest(id, requestId, response);
+    } catch (e) {
+      dispatch({ type: "error", text: String(e) });
+    }
+  }, []);
+
   const newChat = useCallback(() => {
     detach();
     dispatch({ type: "reset" });
@@ -109,7 +121,7 @@ export function useChat({ cwd, permissionMode, model }: Options) {
     [detach],
   );
 
-  return { state, send, stop, newChat, load };
+  return { state, send, stop, respond, newChat, load };
 }
 
 export type ChatController = ReturnType<typeof useChat>;

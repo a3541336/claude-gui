@@ -3,7 +3,7 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import type { PermissionMode, StreamLine } from "../types/claude";
+import type { PermissionMode, PermissionResponse, StreamLine } from "../types/claude";
 
 export interface ClaudeInfo {
   path: string;
@@ -40,6 +40,8 @@ export const claudeApi = {
     invoke<void>("start_session", { sessionId, options }),
   sendMessage: (sessionId: string, text: string) =>
     invoke<void>("send_message", { sessionId, text }),
+  respondToRequest: (sessionId: string, requestId: string, response: PermissionResponse) =>
+    invoke<void>("respond_to_request", { sessionId, requestId, response }),
   stopSession: (sessionId: string) => invoke<void>("stop_session", { sessionId }),
 
   onMessage: (cb: (p: MessagePayload) => void): Promise<UnlistenFn> =>

@@ -1,3 +1,4 @@
+use serde_json::Value;
 use tauri::{AppHandle, State};
 
 use crate::claude::process::SpawnOptions;
@@ -25,6 +26,20 @@ pub async fn send_message(
     text: String,
 ) -> AppResult<()> {
     state.sessions.send(&session_id, &text).await
+}
+
+/// Answers a `control_request` from claude, e.g. a permission prompt.
+#[tauri::command]
+pub async fn respond_to_request(
+    state: State<'_, AppState>,
+    session_id: String,
+    request_id: String,
+    response: Value,
+) -> AppResult<()> {
+    state
+        .sessions
+        .respond(&session_id, &request_id, &response)
+        .await
 }
 
 #[tauri::command]

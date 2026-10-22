@@ -11,7 +11,11 @@ interface Props {
 export function ChatView({ chat, disabledReason }: Props) {
   return (
     <main className="chat">
-      <MessageList entries={chat.state.entries} busy={chat.state.busy} />
+      <MessageList
+        entries={chat.state.entries}
+        busy={chat.state.busy}
+        onRespond={(requestId, response) => void chat.respond(requestId, response)}
+      />
       <Composer
         busy={chat.state.busy}
         disabledReason={disabledReason}

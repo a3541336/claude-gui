@@ -7,7 +7,7 @@ const MODE_KEY = "claude-gui.permissionMode";
 const MODEL_KEY = "claude-gui.model";
 
 export const PERMISSION_MODES: Array<{ value: PermissionMode; label: string }> = [
-  { value: "default", label: "預設（未允許的工具會被拒絕）" },
+  { value: "default", label: "預設（需要時詢問）" },
   { value: "acceptEdits", label: "自動接受檔案修改" },
   { value: "plan", label: "規劃模式（唯讀）" },
   { value: "bypassPermissions", label: "略過所有權限確認" },
