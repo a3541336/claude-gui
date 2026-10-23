@@ -25,6 +25,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::system::detect_claude,
             commands::system::set_claude_path,
+            commands::auth::auth_status,
+            commands::auth::auth_login,
+            commands::auth::auth_logout,
             commands::session::start_session,
             commands::session::send_message,
             commands::session::respond_to_request,

@@ -1,4 +1,6 @@
 import { useRef, useState } from "react";
+import { AccountBar } from "./features/account/AccountBar";
+import { useAccount } from "./features/account/useAccount";
 import { ChatView } from "./features/chat/ChatView";
 import { useChat } from "./features/chat/useChat";
 import { ClaudeStatusBar } from "./features/claude-status/ClaudeStatusBar";
@@ -33,7 +35,13 @@ export default function App() {
   // Identifies the latest draft request, so a cancelled one is ignored when it finishes.
   const draftRef = useRef(0);
 
-  const claudeUnavailable = claude.status.kind !== "ready" ? "claude CLI 尚未就緒" : null;
+  const account = useAccount(claude.status.kind === "ready");
+  const claudeUnavailable =
+    claude.status.kind !== "ready"
+      ? "claude CLI 尚未就緒"
+      : account.loggedOut
+        ? "尚未登入 Claude"
+        : null;
   const disabledReason = claudeUnavailable ?? (!workspace.cwd ? "請先選擇工作目錄" : null);
 
   // A different directory is a different project, so start over.
@@ -97,22 +105,25 @@ export default function App() {
   return (
     <div className="app">
       <aside className="sidebar">
-        <SkillsPanel
-          items={skills.items}
-          error={skills.error}
-          onRun={(skill) => setSkillDialog({ kind: "run", skill })}
-          onEdit={(skill) => setSkillDialog({ kind: "edit", skill, isNew: false })}
-          onDelete={(id) => void skills.remove(id)}
-        />
-        <HistorySidebar
-          items={history.items}
-          error={history.error}
-          activeId={chat.state.conversationId}
-          cwd={workspace.cwd}
-          onOpen={(id) => void openConversation(id)}
-          onDelete={deleteConversation}
-          onNewChatIn={newChatIn}
-        />
+        <div className="sidebar__scroll">
+          <SkillsPanel
+            items={skills.items}
+            error={skills.error}
+            onRun={(skill) => setSkillDialog({ kind: "run", skill })}
+            onEdit={(skill) => setSkillDialog({ kind: "edit", skill, isNew: false })}
+            onDelete={(id) => void skills.remove(id)}
+          />
+          <HistorySidebar
+            items={history.items}
+            error={history.error}
+            activeId={chat.state.conversationId}
+            cwd={workspace.cwd}
+            onOpen={(id) => void openConversation(id)}
+            onDelete={deleteConversation}
+            onNewChatIn={newChatIn}
+          />
+        </div>
+        <AccountBar account={account} onBeforeLogout={chat.stop} />
       </aside>
       <div className="app__main">
         <WorkspaceBar
