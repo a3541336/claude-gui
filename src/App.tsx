@@ -11,6 +11,8 @@ import { draftSkill } from "./features/skills/draftSkill";
 import { SkillDrafting, SkillEditor, SkillRunner } from "./features/skills/SkillDialogs";
 import { SkillsPanel } from "./features/skills/SkillsPanel";
 import { useSkills, type Skill } from "./features/skills/useSkills";
+import { UpdateBanner } from "./features/updates/UpdateBanner";
+import { useUpdates } from "./features/updates/useUpdates";
 import { UsageBar } from "./features/usage/UsageBar";
 import { WorkspaceBar } from "./features/workspace/WorkspaceBar";
 import { WorkspaceSettings } from "./features/workspace/WorkspaceSettings";
@@ -36,6 +38,10 @@ export default function App() {
   const draftRef = useRef(0);
 
   const account = useAccount(claude.status.kind === "ready");
+  const updates = useUpdates(
+    claude.status.kind === "ready" ? claude.status.info.version : null,
+    claude.check,
+  );
   const claudeUnavailable =
     claude.status.kind !== "ready"
       ? "claude CLI 尚未就緒"
@@ -134,6 +140,7 @@ export default function App() {
             skillSource ? () => void makeSkill(skillSource.cwd, skillSource.sessionId) : undefined
           }
         />
+        <UpdateBanner updates={updates} chatBusy={chat.state.busy} />
         <ClaudeStatusBar claude={claude} />
         <ChatView chat={chat} disabledReason={disabledReason} cwd={workspace.cwd} />
         <UsageBar

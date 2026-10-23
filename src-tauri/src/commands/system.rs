@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use serde::Serialize;
 use tauri::State;
 
+use crate::claude::update;
 use crate::error::AppResult;
 use crate::state::AppState;
 
@@ -38,4 +39,11 @@ pub async fn set_claude_path(
     *state.claude_path_override.lock().await = path.map(PathBuf::from);
     state.clear_binary_cache().await;
     detect_claude(state).await
+}
+
+/// Updates the claude CLI and returns its output. The cached binary is kept;
+/// the path stays the same and new processes run the new version.
+#[tauri::command]
+pub async fn update_claude(state: State<'_, AppState>) -> AppResult<String> {
+    update::update(&state.resolve_binary().await?).await
 }

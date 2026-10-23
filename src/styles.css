@@ -935,3 +935,40 @@ pre {
   padding: 2px 10px;
   font-size: 12px;
 }
+
+/* Update notices, above the status bar */
+.update-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  background: var(--surface-muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.update-banner--error {
+  color: var(--error);
+  background: var(--error-bg);
+}
+
+.update-banner__text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.update-banner button {
+  flex-shrink: 0;
+  padding: 2px 10px;
+  font-size: 12px;
+}
+
+.update-banner .update-banner__dismiss {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  padding: 0 6px;
+}

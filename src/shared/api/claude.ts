@@ -35,6 +35,8 @@ export interface ExitPayload {
 export const claudeApi = {
   detect: () => invoke<ClaudeInfo>("detect_claude"),
   setPath: (path: string | null) => invoke<ClaudeInfo>("set_claude_path", { path }),
+  /** Runs `claude update`; resolves with its output. */
+  update: () => invoke<string>("update_claude"),
 
   startSession: (sessionId: string, options: SpawnOptions) =>
     invoke<void>("start_session", { sessionId, options }),

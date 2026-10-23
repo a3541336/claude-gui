@@ -1,6 +1,8 @@
 name: release
 
 # Push a tag like v0.1.0 to build macOS + Windows installers into a draft release.
+# Installed apps see the update once the draft is published (they read latest.json
+# from the latest published release).
 on:
   push:
     tags: ["v*"]
@@ -42,6 +44,9 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Signs the update bundles; the app only installs updates signed with this key.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "Claude GUI ${{ github.ref_name }}"

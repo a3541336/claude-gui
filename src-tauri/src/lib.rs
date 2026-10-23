@@ -15,6 +15,8 @@ use tauri::Manager;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(AppState::default())
         .setup(|app| {
             let data_dir = app.path().app_data_dir()?;
@@ -25,6 +27,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::system::detect_claude,
             commands::system::set_claude_path,
+            commands::system::update_claude,
             commands::auth::auth_status,
             commands::auth::auth_login,
             commands::auth::auth_logout,
