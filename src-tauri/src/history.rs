@@ -97,7 +97,7 @@ impl HistoryStore {
 }
 
 /// `None` when the file doesn't exist.
-async fn read_json<T: serde::de::DeserializeOwned>(path: &Path) -> AppResult<Option<T>> {
+pub(crate) async fn read_json<T: serde::de::DeserializeOwned>(path: &Path) -> AppResult<Option<T>> {
     match tokio::fs::read(path).await {
         Ok(bytes) => Ok(Some(serde_json::from_slice(&bytes)?)),
         Err(err) if err.kind() == ErrorKind::NotFound => Ok(None),
@@ -106,7 +106,7 @@ async fn read_json<T: serde::de::DeserializeOwned>(path: &Path) -> AppResult<Opt
 }
 
 /// Writes to a temp file first so a crash never leaves a half-written file.
-async fn write_json<T: Serialize + ?Sized>(path: &Path, value: &T) -> AppResult<()> {
+pub(crate) async fn write_json<T: Serialize + ?Sized>(path: &Path, value: &T) -> AppResult<()> {
     if let Some(parent) = path.parent() {
         tokio::fs::create_dir_all(parent).await?;
     }

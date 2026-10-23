@@ -3,9 +3,11 @@ mod commands;
 mod error;
 mod events;
 mod history;
+mod skills;
 mod state;
 
 use history::HistoryStore;
+use skills::SkillStore;
 use state::AppState;
 use tauri::Manager;
 
@@ -15,8 +17,9 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .manage(AppState::default())
         .setup(|app| {
-            let dir = app.path().app_data_dir()?.join("history");
-            app.manage(HistoryStore::new(dir));
+            let data_dir = app.path().app_data_dir()?;
+            app.manage(HistoryStore::new(data_dir.join("history")));
+            app.manage(SkillStore::new(data_dir.join("skills.json")));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -30,6 +33,10 @@ pub fn run() {
             commands::history::save_history,
             commands::history::load_history,
             commands::history::delete_history,
+            commands::skills::list_skills,
+            commands::skills::save_skill,
+            commands::skills::delete_skill,
+            commands::skills::ask_structured,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

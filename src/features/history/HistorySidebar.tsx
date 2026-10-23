@@ -22,7 +22,7 @@ export function HistorySidebar({ items, error, activeId, cwd, onOpen, onDelete, 
   };
 
   return (
-    <aside className="history">
+    <section className="history">
       <div className="history__header">歷史對話</div>
       {error && <p className="history__error">{error}</p>}
       {groups.length === 0 && <p className="history__empty">尚無對話紀錄</p>}
@@ -67,7 +67,7 @@ export function HistorySidebar({ items, error, activeId, cwd, onOpen, onDelete, 
           </ul>
         </section>
       ))}
-    </aside>
+    </section>
   );
 }
 

@@ -8,6 +8,8 @@ pub enum AppError {
     InvalidClaudePath(String),
     #[error("無法執行 claude：{0}")]
     ClaudeNotRunnable(String),
+    #[error("claude 執行失敗：{0}")]
+    ClaudeFailed(String),
     #[error("工作階段不存在：{0}")]
     SessionNotFound(String),
     #[error("工作階段已存在：{0}")]

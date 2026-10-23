@@ -65,9 +65,8 @@ export function useChat({ cwd, permissionMode, model }: Options) {
     [detach],
   );
 
-  const send = useCallback(
-    async (text: string) => {
-      if (!cwd || !text.trim()) return;
+  const deliver = useCallback(
+    async (text: string, dir: string, resume: string | null) => {
       dispatch({ type: "userSent", text });
       try {
         let id = sessionRef.current;
@@ -75,10 +74,10 @@ export function useChat({ cwd, permissionMode, model }: Options) {
           id = crypto.randomUUID();
           sessionRef.current = id;
           await claudeApi.startSession(id, {
-            cwd,
+            cwd: dir,
             permissionMode,
             model: model || undefined,
-            resume: state.claudeSessionId ?? undefined,
+            resume: resume ?? undefined,
           });
         }
         await claudeApi.sendMessage(id, text);
@@ -87,7 +86,28 @@ export function useChat({ cwd, permissionMode, model }: Options) {
         dispatch({ type: "error", text: String(e) });
       }
     },
-    [cwd, permissionMode, model, state.claudeSessionId, detach],
+    [permissionMode, model, detach],
+  );
+
+  const send = useCallback(
+    async (text: string) => {
+      if (!cwd || !text.trim()) return;
+      await deliver(text, cwd, state.claudeSessionId);
+    },
+    [cwd, state.claudeSessionId, deliver],
+  );
+
+  /**
+   * Starts a new conversation in `dir` with `text` as its first message.
+   * `dir` is passed in because a `cwd` change made alongside hasn't reached this hook yet.
+   */
+  const startWith = useCallback(
+    async (text: string, dir: string) => {
+      detach();
+      dispatch({ type: "reset" });
+      await deliver(text, dir, null);
+    },
+    [detach, deliver],
   );
 
   const stop = useCallback(() => {
@@ -121,7 +141,7 @@ export function useChat({ cwd, permissionMode, model }: Options) {
     [detach],
   );
 
-  return { state, send, stop, respond, newChat, load };
+  return { state, send, startWith, stop, respond, newChat, load };
 }
 
 export type ChatController = ReturnType<typeof useChat>;
