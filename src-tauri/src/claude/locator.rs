@@ -18,7 +18,7 @@ pub struct ClaudeBinary {
 
 impl ClaudeBinary {
     pub fn command(&self) -> Command {
-        let mut cmd = if is_batch_script(&self.path) {
+        let cmd = if is_batch_script(&self.path) {
             // npm installs claude as a .cmd shim on Windows, which needs cmd.exe.
             let mut cmd = Command::new("cmd");
             cmd.arg("/C").arg(&self.path);
@@ -26,6 +26,15 @@ impl ClaudeBinary {
         } else {
             Command::new(&self.path)
         };
+        self.configure(cmd)
+    }
+
+    /// Another program run with the same environment as claude, e.g. its package manager.
+    pub fn command_for(&self, program: &Path) -> Command {
+        self.configure(Command::new(program))
+    }
+
+    fn configure(&self, mut cmd: Command) -> Command {
         if let Some(path) = &self.env_path {
             cmd.env("PATH", path);
         }

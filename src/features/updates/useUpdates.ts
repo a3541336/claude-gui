@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { claudeApi } from "../../shared/api/claude";
 
 const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
-const CLI_LATEST_URL = "https://registry.npmjs.org/@anthropic-ai/claude-code/latest";
+// `claude update` and Homebrew follow the stable channel, which trails `latest`.
+const CLI_DIST_TAGS_URL = "https://registry.npmjs.org/-/package/@anthropic-ai/claude-code/dist-tags";
 
 export type UpdateState =
   | { kind: "available"; version: string }
@@ -33,8 +34,8 @@ export function useUpdates(claudeVersion: string | null, onClaudeUpdated: () => 
       console.warn("app update check failed", e);
     }
     try {
-      const res = await fetch(CLI_LATEST_URL);
-      if (res.ok) setCliLatest(((await res.json()) as { version: string }).version);
+      const res = await fetch(CLI_DIST_TAGS_URL);
+      if (res.ok) setCliLatest(((await res.json()) as { stable: string }).stable);
     } catch (e) {
       console.warn("claude update check failed", e);
     }
