@@ -3,6 +3,7 @@ mod commands;
 mod error;
 mod events;
 mod history;
+mod migrate;
 mod skills;
 mod state;
 
@@ -20,6 +21,7 @@ pub fn run() {
         .manage(AppState::default())
         .setup(|app| {
             let data_dir = app.path().app_data_dir()?;
+            migrate::migrate_data_dir(&data_dir);
             app.manage(HistoryStore::new(data_dir.join("history")));
             app.manage(SkillStore::new(data_dir.join("skills.json")));
             Ok(())

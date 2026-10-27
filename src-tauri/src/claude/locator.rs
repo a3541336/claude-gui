@@ -117,7 +117,7 @@ fn login_shell_path() -> Option<&'static OsString> {
 #[cfg(unix)]
 fn read_login_shell_path() -> Option<OsString> {
     // Markers separate PATH from anything the shell's rc files print.
-    const MARKER: &str = "__CLAUDE_GUI_PATH__";
+    const MARKER: &str = "__FLOWLOOM_PATH__";
     let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".into());
     let output = std::process::Command::new(shell)
         .args(["-ilc", &format!("printf '{MARKER}%s{MARKER}' \"$PATH\"")])
