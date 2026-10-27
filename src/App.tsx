@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AccountBar } from "./features/account/AccountBar";
 import { useAccount } from "./features/account/useAccount";
 import { ChatView } from "./features/chat/ChatView";
@@ -17,6 +17,9 @@ import { UsageBar } from "./features/usage/UsageBar";
 import { WorkspaceBar } from "./features/workspace/WorkspaceBar";
 import { WorkspaceSettings } from "./features/workspace/WorkspaceSettings";
 import { useWorkspace } from "./features/workspace/useWorkspace";
+import { loadString, saveString } from "./shared/storage";
+
+const SIDEBAR_KEY = "claude-gui.sidebarCollapsed";
 
 type SkillDialog =
   | { kind: "drafting"; error: string | null }
@@ -34,6 +37,8 @@ export default function App() {
   const history = useHistory(chat.state, workspace.cwd);
   const skills = useSkills();
   const [skillDialog, setSkillDialog] = useState<SkillDialog | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => loadString(SIDEBAR_KEY) === "1");
+  useEffect(() => saveString(SIDEBAR_KEY, sidebarCollapsed ? "1" : null), [sidebarCollapsed]);
   // Identifies the latest draft request, so a cancelled one is ignored when it finishes.
   const draftRef = useRef(0);
 
@@ -110,7 +115,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <aside className="sidebar">
+      <aside className="sidebar" hidden={sidebarCollapsed}>
         <div className="sidebar__scroll">
           <SkillsPanel
             items={skills.items}
@@ -136,6 +141,8 @@ export default function App() {
           workspace={workspace}
           onChangeCwd={changeCwd}
           onNewChat={chat.newChat}
+          sidebarCollapsed={sidebarCollapsed}
+          onToggleSidebar={() => setSidebarCollapsed((v) => !v)}
           onMakeSkill={
             skillSource ? () => void makeSkill(skillSource.cwd, skillSource.sessionId) : undefined
           }

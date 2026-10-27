@@ -73,7 +73,7 @@ export function Composer({ busy, disabledReason, cwd, onSend, onStop }: Props) {
           onKeyDown={onKeyDown}
           placeholder={disabledReason ?? "輸入訊息，Enter 送出，Shift+Enter 換行"}
           disabled={disabled}
-          rows={3}
+          rows={1}
         />
       </div>
       <button

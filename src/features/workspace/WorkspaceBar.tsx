@@ -1,16 +1,25 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { SquarePen, WandSparkles } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, SquarePen, WandSparkles } from "lucide-react";
 import type { WorkspaceController } from "./useWorkspace";
 
 interface Props {
   workspace: WorkspaceController;
   onChangeCwd: (cwd: string) => void;
   onNewChat: () => void;
+  sidebarCollapsed: boolean;
+  onToggleSidebar: () => void;
   /** Absent while there is no finished conversation to turn into a skill. */
   onMakeSkill?: () => void;
 }
 
-export function WorkspaceBar({ workspace, onChangeCwd, onNewChat, onMakeSkill }: Props) {
+export function WorkspaceBar({
+  workspace,
+  onChangeCwd,
+  onNewChat,
+  sidebarCollapsed,
+  onToggleSidebar,
+  onMakeSkill,
+}: Props) {
   const { cwd } = workspace;
 
   const pickDirectory = async () => {
@@ -20,6 +29,15 @@ export function WorkspaceBar({ workspace, onChangeCwd, onNewChat, onMakeSkill }:
 
   return (
     <header className="workspace-bar">
+      <button
+        className="button--icon"
+        title={sidebarCollapsed ? "展開側邊欄" : "收合側邊欄"}
+        aria-label={sidebarCollapsed ? "展開側邊欄" : "收合側邊欄"}
+        aria-expanded={!sidebarCollapsed}
+        onClick={onToggleSidebar}
+      >
+        {sidebarCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+      </button>
       <button className="workspace-bar__cwd" onClick={() => void pickDirectory()} title={cwd ?? ""}>
         {cwd ?? "選擇工作目錄…"}
       </button>
