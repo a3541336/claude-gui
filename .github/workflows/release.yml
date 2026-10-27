@@ -49,6 +49,6 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: "Claude GUI ${{ github.ref_name }}"
+          releaseName: "FlowLoom ${{ github.ref_name }}"
           releaseDraft: true
           args: ${{ matrix.args }}
