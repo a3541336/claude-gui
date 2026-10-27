@@ -1,8 +1,9 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { ArrowUp, Paperclip, Square, X } from "lucide-react";
+import { ArrowUp, ListPlus, Paperclip, Square, X } from "lucide-react";
 import { useState, type KeyboardEvent } from "react";
 
 interface Props {
+  /** While claude is busy, sent messages wait in a queue. */
   busy: boolean;
   disabledReason: string | null;
   /** Picked files inside it are referenced by relative path. */
@@ -18,7 +19,7 @@ export function Composer({ busy, disabledReason, cwd, onSend, onStop }: Props) {
   const empty = !text.trim() && files.length === 0;
 
   const submit = () => {
-    if (disabled || busy || empty) return;
+    if (disabled || empty) return;
     // claude expands @-mentions itself and attaches the file contents.
     const mentions = files.map((path) => `@"${displayPath(path, cwd)}"`).join(" ");
     onSend([mentions, text.trim() && text].filter(Boolean).join("\n"));
@@ -71,7 +72,12 @@ export function Composer({ busy, disabledReason, cwd, onSend, onStop }: Props) {
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={onKeyDown}
-          placeholder={disabledReason ?? "輸入訊息，Enter 送出，Shift+Enter 換行"}
+          placeholder={
+            disabledReason ??
+            (busy
+              ? "Claude 回覆中，可以先輸入下一則，會在這輪結束後送出"
+              : "輸入訊息，Enter 送出，Shift+Enter 換行")
+          }
           disabled={disabled}
           rows={1}
         />
@@ -85,21 +91,20 @@ export function Composer({ busy, disabledReason, cwd, onSend, onStop }: Props) {
       >
         <Paperclip size={16} />
       </button>
-      {busy ? (
+      {busy && (
         <button className="composer__stop button--icon" title="停止" aria-label="停止" onClick={onStop}>
           <Square size={16} fill="currentColor" />
         </button>
-      ) : (
-        <button
-          className="button--icon"
-          title="送出"
-          aria-label="送出"
-          onClick={submit}
-          disabled={disabled || empty}
-        >
-          <ArrowUp size={16} />
-        </button>
       )}
+      <button
+        className="button--icon"
+        title={busy ? "排入佇列，這輪結束後送出" : "送出"}
+        aria-label={busy ? "排入佇列" : "送出"}
+        onClick={submit}
+        disabled={disabled || empty}
+      >
+        {busy ? <ListPlus size={16} /> : <ArrowUp size={16} />}
+      </button>
     </div>
   );
 }

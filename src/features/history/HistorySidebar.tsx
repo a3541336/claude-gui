@@ -1,11 +1,14 @@
 import { ask } from "@tauri-apps/plugin-dialog";
-import { Plus, Trash2 } from "lucide-react";
+import { CircleAlert, LoaderCircle, Plus, Trash2 } from "lucide-react";
+import type { ConversationStatus } from "../chat/useChat";
 import type { ConversationMeta } from "./useHistory";
 
 interface Props {
   items: ConversationMeta[];
   error: string | null;
   activeId: string | null;
+  /** Conversations running or waiting for an answer, possibly in the background. */
+  statuses: Record<string, ConversationStatus>;
   cwd: string | null;
   onOpen: (id: string) => void;
   onDelete: (id: string) => void;
@@ -13,7 +16,16 @@ interface Props {
 }
 
 /** Conversations grouped by the directory they ran in, most recent first. */
-export function HistorySidebar({ items, error, activeId, cwd, onOpen, onDelete, onNewChatIn }: Props) {
+export function HistorySidebar({
+  items,
+  error,
+  activeId,
+  statuses,
+  cwd,
+  onOpen,
+  onDelete,
+  onNewChatIn,
+}: Props) {
   const groups = groupByCwd(items);
 
   const confirmDelete = async (item: ConversationMeta) => {
@@ -52,6 +64,16 @@ export function HistorySidebar({ items, error, activeId, cwd, onOpen, onDelete, 
                 onClick={() => onOpen(item.id)}
                 title={item.title}
               >
+                {statuses[item.id] === "running" && (
+                  <LoaderCircle size={12} className="history__status history__status--running">
+                    <title>執行中</title>
+                  </LoaderCircle>
+                )}
+                {statuses[item.id] === "waiting" && (
+                  <CircleAlert size={12} className="history__status history__status--waiting">
+                    <title>等待你的回覆</title>
+                  </CircleAlert>
+                )}
                 <span className="history__title">{item.title}</span>
                 <span className="history__time">{formatTime(item.updatedAt)}</span>
                 <button

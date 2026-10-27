@@ -6,8 +6,6 @@ import type {
   ContentBlock,
   ControlCancelRequestLine,
   ControlRequestLine,
-  RateLimitEventLine,
-  RateLimitWindows,
   ResultLine,
   StreamEventLine,
   StreamLine,
@@ -46,8 +44,8 @@ export interface Draft {
 export type PermissionStatus = "pending" | "allowed" | "denied" | "cancelled";
 
 export interface ChatState {
-  /** Local id under which the conversation is saved to history; set on the first message. */
-  conversationId: string | null;
+  /** Local id under which the conversation is saved to history. */
+  conversationId: string;
   /** Time of the last user message, in ms. */
   updatedAt: number | null;
   entries: ChatEntry[];
@@ -60,8 +58,6 @@ export interface ChatState {
   /** Tokens in the context as of the latest main-thread response; null until known. */
   contextTokens: number | null;
   contextWindow: number | null;
-  /** Account-wide, so it survives switching conversations. */
-  rateLimits: RateLimitWindows | null;
 }
 
 export type ChatAction =
@@ -71,28 +67,28 @@ export type ChatAction =
   | { type: "exited"; code: number | null }
   | { type: "detached"; notice?: string }
   | { type: "error"; text: string }
-  | { type: "permissionAnswered"; requestId: string; allowed: boolean }
-  | { type: "reset" }
-  | { type: "load"; snapshot: ChatSnapshot };
+  | { type: "permissionAnswered"; requestId: string; allowed: boolean };
 
 /** A saved conversation, restored from history. */
-export type ChatSnapshot = Omit<
-  ChatState,
-  "busy" | "draft" | "contextTokens" | "contextWindow" | "rateLimits"
->;
+export type ChatSnapshot = Omit<ChatState, "busy" | "draft" | "contextTokens" | "contextWindow">;
 
-export const initialChatState: ChatState = {
-  conversationId: null,
-  updatedAt: null,
-  entries: [],
-  busy: false,
-  claudeSessionId: null,
-  model: null,
-  draft: null,
-  contextTokens: null,
-  contextWindow: null,
-  rateLimits: null,
-};
+/** A new conversation, or a saved one to continue. */
+export function createChatState(conversationId: string, snapshot?: ChatSnapshot): ChatState {
+  return {
+    updatedAt: null,
+    entries: [],
+    claudeSessionId: null,
+    model: null,
+    ...snapshot,
+    conversationId,
+    busy: false,
+    draft: null,
+    contextTokens: null,
+    contextWindow: null,
+    // The process that asked is gone, so saved prompts can't be answered.
+    ...(snapshot && { entries: cancelPending(snapshot.entries) }),
+  };
+}
 
 const newId = () => crypto.randomUUID();
 
@@ -108,7 +104,6 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
     case "userSent":
       return {
         ...state,
-        conversationId: state.conversationId ?? newId(),
         updatedAt: Date.now(),
         busy: true,
         entries: [...state.entries, { kind: "user", id: newId(), text: action.text }],
@@ -154,16 +149,6 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
           action.requestId,
           action.allowed ? "allowed" : "denied",
         ),
-      };
-    case "reset":
-      return { ...initialChatState, rateLimits: state.rateLimits };
-    case "load":
-      // The process that asked is gone, so saved prompts can't be answered.
-      return {
-        ...initialChatState,
-        ...action.snapshot,
-        entries: cancelPending(action.snapshot.entries),
-        rateLimits: state.rateLimits,
       };
   }
 }
@@ -214,10 +199,6 @@ function applyLine(state: ChatState, line: StreamLine): ChatState {
     case "control_cancel_request": {
       const { request_id } = line as ControlCancelRequestLine;
       return { ...state, entries: setPermissionStatus(state.entries, request_id, "cancelled") };
-    }
-    case "rate_limit_event": {
-      const windows = (line as RateLimitEventLine).rate_limit_info.unifiedWindows;
-      return windows ? { ...state, rateLimits: windows } : state;
     }
     case "user": {
       const { message } = line as UserLine;

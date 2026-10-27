@@ -1,7 +1,10 @@
+import type { RateLimitWindows } from "../../shared/types/claude";
 import type { ChatState } from "../chat/chatReducer";
 import type { RateLimitWindow } from "../../shared/types/claude";
 
-type Props = Pick<ChatState, "model" | "contextTokens" | "contextWindow" | "rateLimits">;
+type Props = Pick<ChatState, "model" | "contextTokens" | "contextWindow"> & {
+  rateLimits: RateLimitWindows | null;
+};
 
 /** Model in use, context window fill and subscription usage (5-hour and 7-day windows). */
 export function UsageBar({ model, contextTokens, contextWindow, rateLimits }: Props) {

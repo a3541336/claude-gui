@@ -34,7 +34,7 @@ export default function App() {
     permissionMode: workspace.permissionMode,
     model: workspace.model,
   });
-  const history = useHistory(chat.state, workspace.cwd);
+  const history = useHistory(chat.conversations);
   const skills = useSkills();
   const [skillDialog, setSkillDialog] = useState<SkillDialog | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => loadString(SIDEBAR_KEY) === "1");
@@ -69,11 +69,18 @@ export default function App() {
 
   const openConversation = async (id: string) => {
     if (id === chat.state.conversationId) return;
+    // Still open, e.g. running in the background.
+    const open = chat.conversations[id];
+    if (open) {
+      if (open.cwd) workspace.setCwd(open.cwd);
+      chat.activate(id);
+      return;
+    }
     const saved = await history.load(id);
     if (!saved) return;
     // claude keeps sessions per directory, so resuming needs the original cwd.
     workspace.setCwd(saved.cwd);
-    chat.load(saved.snapshot);
+    chat.load(saved.snapshot, saved.cwd);
   };
 
   // claude resumes sessions per directory, so drafting needs the conversation's cwd.
@@ -109,7 +116,7 @@ export default function App() {
 
   const deleteConversation = (id: string) => {
     // Otherwise the next change to the open conversation would save it again.
-    if (id === chat.state.conversationId) chat.newChat();
+    chat.close(id);
     history.remove(id);
   };
 
@@ -128,13 +135,14 @@ export default function App() {
             items={history.items}
             error={history.error}
             activeId={chat.state.conversationId}
+            statuses={chat.statuses}
             cwd={workspace.cwd}
             onOpen={(id) => void openConversation(id)}
             onDelete={deleteConversation}
             onNewChatIn={newChatIn}
           />
         </div>
-        <AccountBar account={account} onBeforeLogout={chat.stop} />
+        <AccountBar account={account} onBeforeLogout={chat.stopAll} />
       </aside>
       <div className="app__main">
         <WorkspaceBar
@@ -147,14 +155,14 @@ export default function App() {
             skillSource ? () => void makeSkill(skillSource.cwd, skillSource.sessionId) : undefined
           }
         />
-        <UpdateBanner updates={updates} chatBusy={chat.state.busy} />
+        <UpdateBanner updates={updates} chatBusy={chat.anyBusy} />
         <ClaudeStatusBar claude={claude} />
         <ChatView chat={chat} disabledReason={disabledReason} cwd={workspace.cwd} />
         <UsageBar
           model={chat.state.model}
           contextTokens={chat.state.contextTokens}
           contextWindow={chat.state.contextWindow}
-          rateLimits={chat.state.rateLimits}
+          rateLimits={chat.rateLimits}
         />
         <WorkspaceSettings workspace={workspace} />
       </div>
