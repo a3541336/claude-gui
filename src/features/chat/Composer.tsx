@@ -1,4 +1,5 @@
 import { open } from "@tauri-apps/plugin-dialog";
+import { ArrowUp, Paperclip, Square, X } from "lucide-react";
 import { useState, type KeyboardEvent } from "react";
 
 interface Props {
@@ -55,10 +56,12 @@ export function Composer({ busy, disabledReason, cwd, onSend, onStop }: Props) {
               <li key={path} className="composer__file" title={path}>
                 {displayPath(path, cwd)}
                 <button
+                  className="button--icon"
                   title="移除"
+                  aria-label="移除"
                   onClick={() => setFiles((prev) => prev.filter((p) => p !== path))}
                 >
-                  ×
+                  <X size={12} />
                 </button>
               </li>
             ))}
@@ -74,20 +77,27 @@ export function Composer({ busy, disabledReason, cwd, onSend, onStop }: Props) {
         />
       </div>
       <button
-        className="composer__attach"
+        className="composer__attach button--icon"
         onClick={() => void pickFiles()}
         disabled={disabled}
         title="指定檔案，內容會附給 Claude"
+        aria-label="指定檔案"
       >
-        指定檔案
+        <Paperclip size={16} />
       </button>
       {busy ? (
-        <button className="composer__stop" onClick={onStop}>
-          停止
+        <button className="composer__stop button--icon" title="停止" aria-label="停止" onClick={onStop}>
+          <Square size={16} fill="currentColor" />
         </button>
       ) : (
-        <button onClick={submit} disabled={disabled || empty}>
-          送出
+        <button
+          className="button--icon"
+          title="送出"
+          aria-label="送出"
+          onClick={submit}
+          disabled={disabled || empty}
+        >
+          <ArrowUp size={16} />
         </button>
       )}
     </div>

@@ -1,4 +1,5 @@
 import { ask } from "@tauri-apps/plugin-dialog";
+import { X } from "lucide-react";
 import type { UpdatesController, UpdateState } from "./useUpdates";
 
 interface Props {
@@ -74,8 +75,13 @@ function Row({ name, state, action, onInstall, onDismiss }: RowProps) {
           <button className="button--primary" onClick={onInstall}>
             {state.kind === "failed" ? "重試" : action}
           </button>
-          <button className="update-banner__dismiss" title="稍後再說" onClick={onDismiss}>
-            ×
+          <button
+            className="update-banner__dismiss button--icon"
+            title="稍後再說"
+            aria-label="稍後再說"
+            onClick={onDismiss}
+          >
+            <X size={14} />
           </button>
         </>
       )}

@@ -1,4 +1,5 @@
 import { open } from "@tauri-apps/plugin-dialog";
+import { SquarePen, WandSparkles } from "lucide-react";
 import type { WorkspaceController } from "./useWorkspace";
 
 interface Props {
@@ -23,13 +24,17 @@ export function WorkspaceBar({ workspace, onChangeCwd, onNewChat, onMakeSkill }:
         {cwd ?? "選擇工作目錄…"}
       </button>
       <button
+        className="button--icon"
         onClick={onMakeSkill}
         disabled={!onMakeSkill}
-        title="讓 AI 把這段對話整理成可重複使用的技能"
+        title="轉成技能：讓 AI 把這段對話整理成可重複使用的技能"
+        aria-label="轉成技能"
       >
-        轉成技能
+        <WandSparkles size={16} />
       </button>
-      <button onClick={onNewChat}>新對話</button>
+      <button className="button--icon" title="新對話" aria-label="新對話" onClick={onNewChat}>
+        <SquarePen size={16} />
+      </button>
     </header>
   );
 }

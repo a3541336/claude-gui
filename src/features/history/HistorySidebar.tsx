@@ -1,4 +1,5 @@
 import { ask } from "@tauri-apps/plugin-dialog";
+import { Plus, Trash2 } from "lucide-react";
 import type { ConversationMeta } from "./useHistory";
 
 interface Props {
@@ -37,9 +38,10 @@ export function HistorySidebar({ items, error, activeId, cwd, onOpen, onDelete, 
             <button
               className="history__icon-button"
               title="在此路徑開新對話"
+              aria-label="在此路徑開新對話"
               onClick={() => onNewChatIn(dir)}
             >
-              ＋
+              <Plus size={14} />
             </button>
           </div>
           <ul>
@@ -55,12 +57,13 @@ export function HistorySidebar({ items, error, activeId, cwd, onOpen, onDelete, 
                 <button
                   className="history__icon-button history__delete"
                   title="刪除"
+                  aria-label="刪除"
                   onClick={(e) => {
                     e.stopPropagation();
                     void confirmDelete(item);
                   }}
                 >
-                  ×
+                  <Trash2 size={14} />
                 </button>
               </li>
             ))}

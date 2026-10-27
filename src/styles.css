@@ -71,6 +71,18 @@ select {
   cursor: pointer;
 }
 
+/* Buttons holding a lucide icon, alone or before a label */
+.button--icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.button--icon > svg {
+  flex-shrink: 0;
+}
+
 button:disabled {
   opacity: 0.5;
   cursor: default;
@@ -160,7 +172,9 @@ pre {
 }
 
 .history__icon-button {
-  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 4px;
   border: none;
   background: transparent;
   color: var(--text-muted);
@@ -649,6 +663,10 @@ pre {
   color: var(--accent-text);
   border-color: var(--accent);
   padding: 8px 16px;
+}
+
+.composer > .button--icon {
+  padding: 8px;
 }
 
 .composer .composer__attach {

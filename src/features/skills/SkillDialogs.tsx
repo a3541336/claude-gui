@@ -1,3 +1,4 @@
+import { Plus, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import type { Skill, SkillParam } from "../../shared/api/skills";
 import { PARAM_NAME, placeholdersOf, renderPrompt } from "./template";
@@ -8,8 +9,8 @@ function Modal({ title, children, onClose }: { title: string; children: ReactNod
       <div className="modal__panel" role="dialog" aria-label={title}>
         <div className="modal__header">
           <span>{title}</span>
-          <button className="modal__close" title="關閉" onClick={onClose}>
-            ×
+          <button className="modal__close button--icon" title="關閉" aria-label="關閉" onClick={onClose}>
+            <X size={16} />
           </button>
         </div>
         {children}
@@ -80,7 +81,10 @@ export function SkillEditor({ skill: initial, isNew, onSave, onClose }: EditorPr
 
         <div className="skill-form__section">
           <span>參數</span>
-          <button onClick={() => addParam()}>新增參數</button>
+          <button className="button--icon" onClick={() => addParam()}>
+            <Plus size={14} />
+            新增參數
+          </button>
         </div>
         {skill.params.length === 0 && <p className="skill-form__hint">沒有參數，每次執行內容都相同。</p>}
         {skill.params.map((param, i) => (
@@ -102,10 +106,12 @@ export function SkillEditor({ skill: initial, isNew, onSave, onClose }: EditorPr
               onChange={(e) => setParam(i, { defaultValue: e.target.value })}
             />
             <button
+              className="button--icon"
               title="移除參數"
+              aria-label="移除參數"
               onClick={() => set({ params: skill.params.filter((_, j) => j !== i) })}
             >
-              ×
+              <X size={14} />
             </button>
             <input
               className="skill-form__param-desc"
@@ -129,8 +135,9 @@ export function SkillEditor({ skill: initial, isNew, onSave, onClose }: EditorPr
           <p className="skill-form__warning">
             提示詞用到未定義的參數：
             {missing.map((name) => (
-              <button key={name} onClick={() => addParam(name)} title="新增此參數">
-                ＋{name}
+              <button key={name} className="button--icon" onClick={() => addParam(name)} title="新增此參數">
+                <Plus size={12} />
+                {name}
               </button>
             ))}
           </p>
