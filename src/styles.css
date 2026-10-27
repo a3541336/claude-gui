@@ -254,6 +254,16 @@ pre {
   background: var(--surface);
 }
 
+.claude-md__add {
+  display: flex;
+  gap: 6px;
+}
+
+.claude-md__add input {
+  flex: 1;
+  min-width: 0;
+}
+
 .workspace-bar__cwd {
   flex: 1;
   min-width: 0;
@@ -262,6 +272,11 @@ pre {
   text-overflow: ellipsis;
   white-space: nowrap;
   direction: rtl; /* keep the end of long paths visible */
+}
+
+.workspace-bar__cwd--chat {
+  color: var(--text-muted);
+  direction: ltr;
 }
 
 /* Status bar */
@@ -939,6 +954,7 @@ pre {
 .skill-form__dir {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
   min-width: 0;
   color: var(--text-muted);

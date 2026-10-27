@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef } from "react";
 import { claudeApi } from "../../shared/api/claude";
-import type { PermissionMode, PermissionResponse } from "../../shared/types/claude";
+import { projectApi } from "../../shared/api/project";
+import type { AssistantLine, PermissionMode, PermissionResponse } from "../../shared/types/claude";
 import type { ChatAction, ChatSnapshot } from "./chatReducer";
 import { chatsReducer, createChatsState, isActive } from "./chatsReducer";
 
 interface Options {
-  /** Directory for a conversation that hasn't sent anything yet. */
+  /** Directory for a conversation that hasn't sent anything yet; null chats without a project. */
   cwd: string | null;
   permissionMode: PermissionMode;
   /** `--model` value; empty uses claude's default. */
@@ -32,8 +33,9 @@ export function useChat({ cwd, permissionMode, model }: Options) {
   // Conversation id → id of its claude process. Events from any other
   // (e.g. just-stopped) process are ignored.
   const processes = useRef(new Map<string, string>());
-  // Processes started before a settings change; replaced once their turn ends.
-  const stale = useRef(new Set<string>());
+  // Processes started before a settings change → the notice to show once their
+  // turn ends and they are replaced; null shows none.
+  const stale = useRef(new Map<string, string | null>());
 
   const chatAction = useCallback(
     (id: string, action: ChatAction) => dispatch({ type: "chat", id, action }),
@@ -59,9 +61,15 @@ export function useChat({ cwd, permissionMode, model }: Options) {
         const id = ownerOf(p.sessionId);
         if (!id) return;
         chatAction(id, { type: "line", line: p.line });
+        // Other conversations in the directory only read CLAUDE.md on start.
+        if (editsClaudeMd(p.line as AssistantLine)) {
+          const { cwd } = stateRef.current.conversations[id] ?? {};
+          if (cwd !== undefined) restartRef.current((c, other) => c === cwd && other !== id);
+        }
         if (p.line.type === "result" && stale.current.has(id)) {
+          const notice = stale.current.get(id) ?? undefined;
           detach(id);
-          chatAction(id, { type: "detached", notice: "設定已變更，下次送出時套用" });
+          chatAction(id, { type: "detached", notice });
         }
       }),
       claudeApi.onStderr((p) => {
@@ -81,22 +89,60 @@ export function useChat({ cwd, permissionMode, model }: Options) {
     };
   }, [chatAction, detach]);
 
-  // New settings need new processes; conversations resume. A running turn finishes first.
+  /**
+   * Replaces the processes of the matching conversations, so the next message
+   * starts claude afresh and it resumes the conversation. A running turn finishes first.
+   */
+  const restart = useCallback(
+    (matches: (cwd: string | null, id: string) => boolean, notice?: string) => {
+      for (const id of [...processes.current.keys()]) {
+        const conv = stateRef.current.conversations[id];
+        if (!conv || !matches(conv.cwd, id)) continue;
+        if (conv.chat.busy) {
+          stale.current.set(id, notice ?? null);
+        } else {
+          detach(id);
+          chatAction(id, { type: "detached", notice });
+        }
+      }
+    },
+    [detach, chatAction],
+  );
+
+  // The event subscription is set up once, so it reaches `restart` through a ref.
+  const restartRef = useRef(restart);
+  useLayoutEffect(() => {
+    restartRef.current = restart;
+  });
+
   const firstSettings = useRef(true);
   useEffect(() => {
     if (firstSettings.current) {
       firstSettings.current = false;
       return;
     }
-    for (const id of [...processes.current.keys()]) {
-      if (stateRef.current.conversations[id]?.chat.busy) {
-        stale.current.add(id);
-      } else {
-        detach(id);
-        chatAction(id, { type: "detached", notice: "設定已變更，下次送出時套用" });
+    restart(() => true, "設定已變更，下次送出時套用");
+  }, [permissionMode, model, restart]);
+
+  /** claude reads CLAUDE.md only when it starts, so pick up an edited one. */
+  const reloadProject = useCallback(
+    (dir: string | null, notice?: string) => restart((cwd) => cwd === dir, notice),
+    [restart],
+  );
+
+  /** Like the CLI's `#` shortcut: adds a note to the directory's CLAUDE.md without asking claude. */
+  const remember = useCallback(
+    async (id: string, note: string, dir: string | null) => {
+      try {
+        await projectApi.appendClaudeMd(dir, note);
+        chatAction(id, { type: "notice", level: "info", text: `已記到 CLAUDE.md：${note}` });
+        reloadProject(dir);
+      } catch (e) {
+        chatAction(id, { type: "notice", level: "error", text: `記錄失敗：${e}` });
       }
-    }
-  }, [permissionMode, model, detach, chatAction]);
+    },
+    [chatAction, reloadProject],
+  );
 
   useEffect(
     () => () => {
@@ -106,7 +152,7 @@ export function useChat({ cwd, permissionMode, model }: Options) {
   );
 
   const deliver = useCallback(
-    async (id: string, text: string, dir: string, resume: string | null) => {
+    async (id: string, text: string, dir: string | null, resume: string | null) => {
       dispatch({ type: "sent", id, text, cwd: dir });
       try {
         let pid = processes.current.get(id);
@@ -114,7 +160,7 @@ export function useChat({ cwd, permissionMode, model }: Options) {
           pid = crypto.randomUUID();
           processes.current.set(id, pid);
           await claudeApi.startSession(pid, {
-            cwd: dir,
+            cwd: dir ?? undefined,
             permissionMode,
             model: model || undefined,
             resume: resume ?? undefined,
@@ -132,7 +178,7 @@ export function useChat({ cwd, permissionMode, model }: Options) {
   // Send what was queued once its conversation's turn ends.
   useEffect(() => {
     for (const [id, conv] of Object.entries(state.conversations)) {
-      if (conv.chat.busy || conv.queued.length === 0 || conv.queuePaused || !conv.cwd) continue;
+      if (conv.chat.busy || conv.queued.length === 0 || conv.queuePaused) continue;
       dispatch({ type: "clearQueue", id });
       void deliver(id, conv.queued.join("\n\n"), conv.cwd, conv.chat.claudeSessionId);
     }
@@ -146,6 +192,13 @@ export function useChat({ cwd, permissionMode, model }: Options) {
     async (text: string) => {
       const { activeId: id, conversations } = stateRef.current;
       const conv = conversations[id];
+      // A started conversation keeps its directory; claude resumes it only from there.
+      const dir = conv.chat.updatedAt === null ? cwd : conv.cwd;
+      const note = memoryNote(text);
+      if (note) {
+        await remember(id, note, dir);
+        return;
+      }
       const messages = [...conv.queued, text].filter((m) => m.trim());
       if (messages.length === 0) return;
       if (conv.chat.busy) {
@@ -153,12 +206,10 @@ export function useChat({ cwd, permissionMode, model }: Options) {
         dispatch({ type: "enqueue", id, text });
         return;
       }
-      const dir = conv.cwd ?? cwd;
-      if (!dir) return;
       if (conv.queued.length > 0) dispatch({ type: "clearQueue", id });
       await deliver(id, messages.join("\n\n"), dir, conv.chat.claudeSessionId);
     },
-    [cwd, deliver],
+    [cwd, deliver, remember],
   );
 
   /** Closes the shown conversation if nothing in it is still running. */
@@ -178,7 +229,7 @@ export function useChat({ cwd, permissionMode, model }: Options) {
 
   /** Shows a conversation restored from history; the next message resumes it. */
   const load = useCallback(
-    (snapshot: ChatSnapshot, dir: string) => {
+    (snapshot: ChatSnapshot, dir: string | null) => {
       leave();
       dispatch({ type: "open", id: snapshot.conversationId, cwd: dir, snapshot });
     },
@@ -200,7 +251,7 @@ export function useChat({ cwd, permissionMode, model }: Options) {
    * `dir` is passed in because a `cwd` change made alongside hasn't reached this hook yet.
    */
   const startWith = useCallback(
-    async (text: string, dir: string) => {
+    async (text: string, dir: string | null) => {
       leave();
       const id = crypto.randomUUID();
       dispatch({ type: "open", id, cwd: dir });
@@ -282,7 +333,24 @@ export function useChat({ cwd, permissionMode, model }: Options) {
     activate,
     close,
     removeQueued,
+    reloadProject,
   };
 }
 
 export type ChatController = ReturnType<typeof useChat>;
+
+/** The note in a `# …` message, which goes to CLAUDE.md instead of claude. */
+function memoryNote(text: string): string | null {
+  const match = /^#(?!#)\s*(.+)$/s.exec(text.trim());
+  return match ? match[1].trim() : null;
+}
+
+function editsClaudeMd(line: AssistantLine): boolean {
+  if (line.type !== "assistant") return false;
+  return line.message.content.some(
+    (block) =>
+      block.type === "tool_use" &&
+      ["Edit", "Write", "MultiEdit"].includes(block.name) &&
+      /(^|[\\/])CLAUDE\.md$/.test(String(block.input.file_path ?? "")),
+  );
+}

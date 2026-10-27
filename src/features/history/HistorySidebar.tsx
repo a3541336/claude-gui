@@ -12,7 +12,8 @@ interface Props {
   cwd: string | null;
   onOpen: (id: string) => void;
   onDelete: (id: string) => void;
-  onNewChatIn: (cwd: string) => void;
+  /** null starts a chat without a project. */
+  onNewChatIn: (cwd: string | null) => void;
 }
 
 /** Conversations grouped by the directory they ran in, most recent first. */
@@ -43,14 +44,14 @@ export function HistorySidebar({
         <section key={dir} className="history__group">
           <div
             className={`history__dir${dir === cwd ? " history__dir--current" : ""}`}
-            title={dir}
+            title={dir ?? "不指定工作目錄的對話"}
           >
-            <span className="history__dir-name">{baseName(dir)}</span>
-            <span className="history__dir-path">{dir}</span>
+            <span className="history__dir-name">{dir ? baseName(dir) : "閒聊"}</span>
+            <span className="history__dir-path">{dir ?? "不指定工作目錄"}</span>
             <button
               className="history__icon-button"
-              title="在此路徑開新對話"
-              aria-label="在此路徑開新對話"
+              title={dir ? "在此路徑開新對話" : "開新閒聊"}
+              aria-label={dir ? "在此路徑開新對話" : "開新閒聊"}
               onClick={() => onNewChatIn(dir)}
             >
               <Plus size={14} />
@@ -97,8 +98,8 @@ export function HistorySidebar({
 }
 
 /** Keeps the input order, so groups are ordered by their most recent conversation. */
-function groupByCwd(items: ConversationMeta[]): Array<[string, ConversationMeta[]]> {
-  const groups = new Map<string, ConversationMeta[]>();
+function groupByCwd(items: ConversationMeta[]): Array<[string | null, ConversationMeta[]]> {
+  const groups = new Map<string | null, ConversationMeta[]>();
   for (const item of items) {
     const group = groups.get(item.cwd);
     if (group) group.push(item);

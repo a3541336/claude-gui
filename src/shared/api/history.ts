@@ -6,8 +6,8 @@ import { invoke } from "@tauri-apps/api/core";
 export interface ConversationMeta {
   id: string;
   title: string;
-  /** Working directory the conversation ran in; claude can only resume it from there. */
-  cwd: string;
+  /** Working directory the conversation ran in; claude can only resume it from there. Null for a chat. */
+  cwd: string | null;
   /** Time of the last user message, in ms. */
   updatedAt: number;
   claudeSessionId: string | null;

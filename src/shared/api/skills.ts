@@ -24,7 +24,8 @@ export interface Skill {
 }
 
 export interface StructuredQuery {
-  cwd: string;
+  /** Omitted for a chat without a project. */
+  cwd?: string;
   /** Answers with this claude session's context, without changing it. */
   resume?: string;
   model?: string;

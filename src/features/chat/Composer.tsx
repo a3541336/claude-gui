@@ -76,7 +76,7 @@ export function Composer({ busy, disabledReason, cwd, onSend, onStop }: Props) {
             disabledReason ??
             (busy
               ? "Claude 回覆中，可以先輸入下一則，會在這輪結束後送出"
-              : "輸入訊息，Enter 送出，Shift+Enter 換行")
+              : "輸入訊息，Enter 送出，Shift+Enter 換行；# 開頭會記到 CLAUDE.md")
           }
           disabled={disabled}
           rows={1}

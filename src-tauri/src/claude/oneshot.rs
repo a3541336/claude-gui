@@ -1,6 +1,6 @@
 //! Single questions answered by a short-lived claude process, outside any chat.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Stdio;
 
 use serde::Deserialize;
@@ -13,7 +13,8 @@ use crate::error::{AppError, AppResult};
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StructuredQuery {
-    pub cwd: PathBuf,
+    /// Project directory; `None` for a conversation without one.
+    pub cwd: Option<PathBuf>,
     /// Answers with this session's context. The session is forked, so it is left unchanged.
     pub resume: Option<String>,
     pub model: Option<String>,
@@ -32,7 +33,11 @@ struct ResultOutput {
 }
 
 /// Returns the answer as a value matching `query.schema`.
-pub async fn ask_structured(binary: &ClaudeBinary, query: &StructuredQuery) -> AppResult<Value> {
+pub async fn ask_structured(
+    binary: &ClaudeBinary,
+    cwd: &Path,
+    query: &StructuredQuery,
+) -> AppResult<Value> {
     let mut cmd = binary.command();
     cmd.args([
         "-p",
@@ -52,7 +57,7 @@ pub async fn ask_structured(binary: &ClaudeBinary, query: &StructuredQuery) -> A
         cmd.args(["--resume", session_id, "--fork-session"]);
     }
     let mut child = cmd
-        .current_dir(&query.cwd)
+        .current_dir(cwd)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

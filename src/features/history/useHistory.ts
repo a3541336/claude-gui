@@ -35,7 +35,7 @@ export function useHistory(conversations: Record<string, Conversation>) {
   useEffect(() => {
     for (const { cwd, chat } of Object.values(conversations)) {
       const { conversationId, updatedAt, entries, claudeSessionId, model } = chat;
-      if (updatedAt === null || !cwd || entries.length === 0) continue;
+      if (updatedAt === null || entries.length === 0) continue;
       const prev = lastSaved.current.get(conversationId);
       if (
         prev?.entries === entries &&
@@ -66,7 +66,7 @@ export function useHistory(conversations: Record<string, Conversation>) {
   }, [conversations, serial]);
 
   const load = useCallback(
-    async (id: string): Promise<{ cwd: string; snapshot: ChatSnapshot } | null> => {
+    async (id: string): Promise<{ cwd: string | null; snapshot: ChatSnapshot } | null> => {
       const meta = items.find((item) => item.id === id);
       if (!meta) return null;
       try {

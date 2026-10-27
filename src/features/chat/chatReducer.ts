@@ -67,7 +67,8 @@ export type ChatAction =
   | { type: "exited"; code: number | null }
   | { type: "detached"; notice?: string }
   | { type: "error"; text: string }
-  | { type: "permissionAnswered"; requestId: string; allowed: boolean };
+  | { type: "permissionAnswered"; requestId: string; allowed: boolean }
+  | { type: "notice"; level: "info" | "error"; text: string };
 
 /** A saved conversation, restored from history. */
 export type ChatSnapshot = Omit<ChatState, "busy" | "draft" | "contextTokens" | "contextWindow">;
@@ -141,6 +142,8 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
         draft: null,
         entries: [...cancelPending(state.entries), notice("error", action.text)],
       };
+    case "notice":
+      return { ...state, entries: [...state.entries, notice(action.level, action.text)] };
     case "permissionAnswered":
       return {
         ...state,

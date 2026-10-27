@@ -14,6 +14,7 @@ import { useSkills, type Skill } from "./features/skills/useSkills";
 import { UpdateBanner } from "./features/updates/UpdateBanner";
 import { useUpdates } from "./features/updates/useUpdates";
 import { UsageBar } from "./features/usage/UsageBar";
+import { ClaudeMdDialog } from "./features/workspace/ClaudeMdDialog";
 import { WorkspaceBar } from "./features/workspace/WorkspaceBar";
 import { WorkspaceSettings } from "./features/workspace/WorkspaceSettings";
 import { useWorkspace } from "./features/workspace/useWorkspace";
@@ -53,16 +54,17 @@ export default function App() {
       : account.loggedOut
         ? "尚未登入 Claude"
         : null;
-  const disabledReason = claudeUnavailable ?? (!workspace.cwd ? "請先選擇工作目錄" : null);
+  const disabledReason = claudeUnavailable;
+  const [editingClaudeMd, setEditingClaudeMd] = useState(false);
 
   // A different directory is a different project, so start over.
-  const changeCwd = (dir: string) => {
+  const changeCwd = (dir: string | null) => {
     if (dir === workspace.cwd) return;
     workspace.setCwd(dir);
     chat.newChat();
   };
 
-  const newChatIn = (dir: string) => {
+  const newChatIn = (dir: string | null) => {
     workspace.setCwd(dir);
     chat.newChat();
   };
@@ -72,7 +74,7 @@ export default function App() {
     // Still open, e.g. running in the background.
     const open = chat.conversations[id];
     if (open) {
-      if (open.cwd) workspace.setCwd(open.cwd);
+      workspace.setCwd(open.cwd);
       chat.activate(id);
       return;
     }
@@ -86,11 +88,11 @@ export default function App() {
   // claude resumes sessions per directory, so drafting needs the conversation's cwd.
   const { claudeSessionId, busy } = chat.state;
   const skillSource =
-    !claudeUnavailable && !busy && claudeSessionId && workspace.cwd
+    !claudeUnavailable && !busy && claudeSessionId
       ? { cwd: workspace.cwd, sessionId: claudeSessionId }
       : null;
 
-  const makeSkill = async (cwd: string, sessionId: string) => {
+  const makeSkill = async (cwd: string | null, sessionId: string) => {
     const request = ++draftRef.current;
     setSkillDialog({ kind: "drafting", error: null });
     try {
@@ -108,7 +110,7 @@ export default function App() {
     setSkillDialog(null);
   };
 
-  const runSkill = (prompt: string, cwd: string) => {
+  const runSkill = (prompt: string, cwd: string | null) => {
     setSkillDialog(null);
     workspace.setCwd(cwd);
     void chat.startWith(prompt, cwd);
@@ -148,6 +150,7 @@ export default function App() {
         <WorkspaceBar
           workspace={workspace}
           onChangeCwd={changeCwd}
+          onEditClaudeMd={() => setEditingClaudeMd(true)}
           onNewChat={chat.newChat}
           sidebarCollapsed={sidebarCollapsed}
           onToggleSidebar={() => setSidebarCollapsed((v) => !v)}
@@ -166,6 +169,13 @@ export default function App() {
         />
         <WorkspaceSettings workspace={workspace} />
       </div>
+      {editingClaudeMd && (
+        <ClaudeMdDialog
+          cwd={workspace.cwd}
+          onSaved={() => chat.reloadProject(workspace.cwd, "CLAUDE.md 已更新，下次送出時套用")}
+          onClose={() => setEditingClaudeMd(false)}
+        />
+      )}
       {skillDialog?.kind === "drafting" && (
         <SkillDrafting error={skillDialog.error} onClose={closeSkillDialog} />
       )}

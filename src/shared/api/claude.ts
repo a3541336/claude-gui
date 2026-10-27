@@ -11,7 +11,8 @@ export interface ClaudeInfo {
 }
 
 export interface SpawnOptions {
-  cwd: string;
+  /** Omitted for a chat without a project; the backend picks a directory of its own. */
+  cwd?: string;
   permissionMode?: PermissionMode;
   model?: string;
   resume?: string;

@@ -20,7 +20,9 @@ pub struct ConversationMeta {
     pub id: String,
     pub title: String,
     /// Working directory the conversation ran in; claude can only resume it from there.
-    pub cwd: String,
+    /// `None` for a chat without a project.
+    #[serde(default)]
+    pub cwd: Option<String>,
     /// Time of the last user message, in ms since the epoch.
     pub updated_at: u64,
     pub claude_session_id: Option<String>,

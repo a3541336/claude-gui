@@ -4,7 +4,7 @@ import type { RateLimitEventLine, RateLimitWindows } from "../../shared/types/cl
 import { chatReducer, createChatState, type ChatAction, type ChatSnapshot, type ChatState } from "./chatReducer";
 
 export interface Conversation {
-  /** Where claude runs; null until the first message. */
+  /** Where claude runs once the conversation has started; null is a chat without a project. */
   cwd: string | null;
   chat: ChatState;
   /** Messages typed while claude was busy, sent together when the turn ends. */
@@ -22,8 +22,8 @@ export interface ChatsState {
 
 export type ChatsAction =
   | { type: "chat"; id: string; action: ChatAction }
-  | { type: "sent"; id: string; text: string; cwd: string }
-  | { type: "open"; id: string; cwd?: string; snapshot?: ChatSnapshot }
+  | { type: "sent"; id: string; text: string; cwd: string | null }
+  | { type: "open"; id: string; cwd?: string | null; snapshot?: ChatSnapshot }
   | { type: "activate"; id: string }
   | { type: "close"; id: string }
   | { type: "enqueue"; id: string; text: string }
@@ -35,7 +35,7 @@ export function createChatsState(): ChatsState {
   return { activeId: id, conversations: { [id]: newConversation(id) }, rateLimits: null };
 }
 
-function newConversation(id: string, cwd?: string, snapshot?: ChatSnapshot): Conversation {
+function newConversation(id: string, cwd?: string | null, snapshot?: ChatSnapshot): Conversation {
   return { cwd: cwd ?? null, chat: createChatState(id, snapshot), queued: [], queuePaused: false };
 }
 

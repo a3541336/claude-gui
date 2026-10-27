@@ -1,6 +1,7 @@
 //! Tracks running claude processes and pipes their output to the frontend.
 
 use std::collections::HashMap;
+use std::path::Path;
 use std::sync::Arc;
 
 use serde_json::Value;
@@ -35,6 +36,7 @@ impl SessionManager {
         app: AppHandle,
         id: String,
         binary: &ClaudeBinary,
+        cwd: &Path,
         opts: &SpawnOptions,
     ) -> AppResult<()> {
         let mut sessions = self.sessions.lock().await;
@@ -42,7 +44,7 @@ impl SessionManager {
             return Err(AppError::SessionExists(id));
         }
 
-        let mut child = process::spawn(binary, opts)?;
+        let mut child = process::spawn(binary, cwd, opts)?;
         let (Some(stdin), Some(stdout), Some(stderr)) =
             (child.stdin.take(), child.stdout.take(), child.stderr.take())
         else {
