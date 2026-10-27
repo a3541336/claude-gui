@@ -20,7 +20,7 @@ import { WorkspaceSettings } from "./features/workspace/WorkspaceSettings";
 import { useWorkspace } from "./features/workspace/useWorkspace";
 import { loadString, saveString } from "./shared/storage";
 
-const SIDEBAR_KEY = "claude-gui.sidebarCollapsed";
+const SIDEBAR_KEY = "flowloom.sidebarCollapsed";
 
 type SkillDialog =
   | { kind: "drafting"; error: string | null }

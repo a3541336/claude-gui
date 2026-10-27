@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { claudeApi, type ClaudeInfo } from "../../shared/api/claude";
 import { loadString, saveString } from "../../shared/storage";
 
-const PATH_KEY = "claude-gui.claudePath";
+const PATH_KEY = "flowloom.claudePath";
 
 export type ClaudeStatus =
   | { kind: "checking" }
