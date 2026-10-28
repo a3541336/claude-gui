@@ -2,6 +2,7 @@
 
 pub mod auth;
 mod cli;
+pub mod install;
 pub mod locator;
 pub mod oneshot;
 pub mod process;

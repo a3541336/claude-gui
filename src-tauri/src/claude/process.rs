@@ -50,6 +50,8 @@ pub fn spawn(binary: &ClaudeBinary, cwd: &Path, opts: &SpawnOptions) -> std::io:
         // Recording memories shouldn't need a permission prompt each time.
         "--allowedTools",
         "Edit(./CLAUDE.md)",
+        // Lets a running session switch to bypassPermissions; it isn't enabled by itself.
+        "--allow-dangerously-skip-permissions",
     ]);
     if let Some(mode) = &opts.permission_mode {
         cmd.args(["--permission-mode", mode]);

@@ -10,6 +10,8 @@ pub enum AppError {
     ClaudeNotRunnable(String),
     #[error("claude 執行失敗：{0}")]
     ClaudeFailed(String),
+    #[error("安裝 claude 失敗：{0}")]
+    InstallFailed(String),
     #[error("工作階段不存在：{0}")]
     SessionNotFound(String),
     #[error("工作階段已存在：{0}")]

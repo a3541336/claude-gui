@@ -43,6 +43,16 @@ pub async fn respond_to_request(
         .await
 }
 
+/// Switches a running process's permission mode without restarting it.
+#[tauri::command]
+pub async fn set_permission_mode(
+    state: State<'_, AppState>,
+    session_id: String,
+    mode: String,
+) -> AppResult<String> {
+    state.sessions.set_permission_mode(&session_id, &mode).await
+}
+
 #[tauri::command]
 pub async fn stop_session(state: State<'_, AppState>, session_id: String) -> AppResult<()> {
     state.sessions.stop(&session_id).await

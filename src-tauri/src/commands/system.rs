@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use serde::Serialize;
 use tauri::State;
 
-use crate::claude::update;
+use crate::claude::{install, update};
 use crate::error::AppResult;
 use crate::state::AppState;
 
@@ -46,4 +46,13 @@ pub async fn set_claude_path(
 #[tauri::command]
 pub async fn update_claude(state: State<'_, AppState>) -> AppResult<String> {
     update::update(&state.resolve_binary().await?).await
+}
+
+/// Installs the claude CLI and returns the installer's output. Drops any cached
+/// lookup so the next detection finds the new binary.
+#[tauri::command]
+pub async fn install_claude(state: State<'_, AppState>) -> AppResult<String> {
+    let output = install::install().await?;
+    state.clear_binary_cache().await;
+    Ok(output)
 }

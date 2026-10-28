@@ -1,7 +1,7 @@
 import type { PermissionMode } from "../../shared/types/claude";
 import { MODELS, PERMISSION_MODES, type WorkspaceController } from "./useWorkspace";
 
-/** Permission mode and model pickers; changes apply from the next message. */
+/** Permission mode and model pickers. The mode applies at once, even mid-turn; the model from the next message. */
 export function WorkspaceSettings({ workspace }: { workspace: WorkspaceController }) {
   const { permissionMode, setPermissionMode, model, setModel } = workspace;
 

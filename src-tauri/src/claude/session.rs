@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 use serde_json::Value;
@@ -12,7 +13,7 @@ use tokio::sync::Mutex;
 
 use super::locator::ClaudeBinary;
 use super::process::{self, SpawnOptions};
-use super::protocol::{ControlResponse, UserInput};
+use super::protocol::{ControlRequest, ControlResponse, UserInput};
 use crate::error::{AppError, AppResult};
 use crate::events::{self, ExitPayload, MessagePayload, StderrPayload};
 
@@ -26,6 +27,7 @@ type SessionMap = Arc<Mutex<HashMap<String, Session>>>;
 #[derive(Default)]
 pub struct SessionManager {
     sessions: SessionMap,
+    next_request: AtomicU64,
 }
 
 impl SessionManager {
@@ -64,6 +66,14 @@ impl SessionManager {
     pub async fn respond(&self, id: &str, request_id: &str, response: &Value) -> AppResult<()> {
         let line = ControlResponse::success(request_id, response).to_line()?;
         self.write_line(id, &line).await
+    }
+
+    /// Returns the request id; claude's `control_response` line carries it.
+    pub async fn set_permission_mode(&self, id: &str, mode: &str) -> AppResult<String> {
+        let request_id = format!("flowloom-{}", self.next_request.fetch_add(1, Ordering::Relaxed));
+        let line = ControlRequest::set_permission_mode(&request_id, mode).to_line()?;
+        self.write_line(id, &line).await?;
+        Ok(request_id)
     }
 
     async fn write_line(&self, id: &str, line: &[u8]) -> AppResult<()> {
