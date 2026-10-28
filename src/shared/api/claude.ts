@@ -38,6 +38,8 @@ export const claudeApi = {
   setPath: (path: string | null) => invoke<ClaudeInfo>("set_claude_path", { path }),
   /** Runs `claude update`; resolves with its output. */
   update: () => invoke<string>("update_claude"),
+  /** Runs the official installer; resolves with its output. */
+  install: () => invoke<string>("install_claude"),
 
   startSession: (sessionId: string, options: SpawnOptions) =>
     invoke<void>("start_session", { sessionId, options }),
@@ -45,6 +47,9 @@ export const claudeApi = {
     invoke<void>("send_message", { sessionId, text }),
   respondToRequest: (sessionId: string, requestId: string, response: PermissionResponse) =>
     invoke<void>("respond_to_request", { sessionId, requestId, response }),
+  /** Switches a running process's mode at once; resolves with the control request id. */
+  setPermissionMode: (sessionId: string, mode: PermissionMode) =>
+    invoke<string>("set_permission_mode", { sessionId, mode }),
   stopSession: (sessionId: string) => invoke<void>("stop_session", { sessionId }),
 
   onMessage: (cb: (p: MessagePayload) => void): Promise<UnlistenFn> =>

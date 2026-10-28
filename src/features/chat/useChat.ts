@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef } from "react";
 import { claudeApi } from "../../shared/api/claude";
 import { projectApi } from "../../shared/api/project";
-import type { AssistantLine, PermissionMode, PermissionResponse } from "../../shared/types/claude";
+import type {
+  AssistantLine,
+  PermissionMode,
+  PermissionResponse,
+  StreamLine,
+} from "../../shared/types/claude";
+import { PERMISSION_MODES } from "../workspace/useWorkspace";
 import type { ChatAction, ChatSnapshot } from "./chatReducer";
 import { chatsReducer, createChatsState, isActive } from "./chatsReducer";
 
@@ -36,6 +42,8 @@ export function useChat({ cwd, permissionMode, model }: Options) {
   // Processes started before a settings change → the notice to show once their
   // turn ends and they are replaced; null shows none.
   const stale = useRef(new Map<string, string | null>());
+  // Pending mode switches: control request id → conversation and mode.
+  const modeRequests = useRef(new Map<string, { id: string; mode: PermissionMode }>());
 
   const chatAction = useCallback(
     (id: string, action: ChatAction) => dispatch({ type: "chat", id, action }),
@@ -56,10 +64,27 @@ export function useChat({ cwd, permissionMode, model }: Options) {
       for (const [id, p] of processes.current) if (p === pid) return id;
       return null;
     };
+    const answerModeRequest = (line: StreamLine) => {
+      const response = line.response as { subtype?: string; request_id?: string; error?: string };
+      const request = modeRequests.current.get(response.request_id ?? "");
+      if (!request) return;
+      modeRequests.current.delete(response.request_id ?? "");
+      const label = PERMISSION_MODES.find((m) => m.value === request.mode)?.label ?? request.mode;
+      chatAction(
+        request.id,
+        response.subtype === "error"
+          ? { type: "notice", level: "error", text: `無法切換為「${label}」：${response.error ?? ""}` }
+          : { type: "notice", level: "info", text: `已切換為「${label}」` },
+      );
+    };
     const subscriptions = [
       claudeApi.onMessage((p) => {
         const id = ownerOf(p.sessionId);
         if (!id) return;
+        if (p.line.type === "control_response") {
+          answerModeRequest(p.line);
+          return;
+        }
         chatAction(id, { type: "line", line: p.line });
         // Other conversations in the directory only read CLAUDE.md on start.
         if (editsClaudeMd(p.line as AssistantLine)) {
@@ -115,14 +140,30 @@ export function useChat({ cwd, permissionMode, model }: Options) {
     restartRef.current = restart;
   });
 
-  const firstSettings = useRef(true);
+  // claude takes the model only on start, so running processes are replaced.
+  const firstModel = useRef(true);
   useEffect(() => {
-    if (firstSettings.current) {
-      firstSettings.current = false;
+    if (firstModel.current) {
+      firstModel.current = false;
       return;
     }
-    restart(() => true, "設定已變更，下次送出時套用");
-  }, [permissionMode, model, restart]);
+    restart(() => true, "模型已變更，下次送出時套用");
+  }, [model, restart]);
+
+  // The permission mode switches in place, even mid-turn.
+  const firstMode = useRef(true);
+  useEffect(() => {
+    if (firstMode.current) {
+      firstMode.current = false;
+      return;
+    }
+    for (const [id, pid] of processes.current) {
+      claudeApi.setPermissionMode(pid, permissionMode).then(
+        (requestId) => modeRequests.current.set(requestId, { id, mode: permissionMode }),
+        (e) => chatAction(id, { type: "notice", level: "error", text: `無法切換權限模式：${e}` }),
+      );
+    }
+  }, [permissionMode, chatAction]);
 
   /** claude reads CLAUDE.md only when it starts, so pick up an edited one. */
   const reloadProject = useCallback(
