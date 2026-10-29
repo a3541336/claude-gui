@@ -71,6 +71,18 @@ select {
   cursor: pointer;
 }
 
+/* Buttons holding a lucide icon, alone or before a label */
+.button--icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.button--icon > svg {
+  flex-shrink: 0;
+}
+
 button:disabled {
   opacity: 0.5;
   cursor: default;
@@ -160,7 +172,9 @@ pre {
 }
 
 .history__icon-button {
-  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 4px;
   border: none;
   background: transparent;
   color: var(--text-muted);
@@ -197,6 +211,25 @@ pre {
   white-space: nowrap;
 }
 
+.history__status {
+  flex-shrink: 0;
+}
+
+.history__status--running {
+  color: var(--accent);
+  animation: spin 1s linear infinite;
+}
+
+.history__status--waiting {
+  color: #d97706;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .history__time {
   flex-shrink: 0;
   font-size: 11px;
@@ -221,6 +254,16 @@ pre {
   background: var(--surface);
 }
 
+.claude-md__add {
+  display: flex;
+  gap: 6px;
+}
+
+.claude-md__add input {
+  flex: 1;
+  min-width: 0;
+}
+
 .workspace-bar__cwd {
   flex: 1;
   min-width: 0;
@@ -229,6 +272,11 @@ pre {
   text-overflow: ellipsis;
   white-space: nowrap;
   direction: rtl; /* keep the end of long paths visible */
+}
+
+.workspace-bar__cwd--chat {
+  color: var(--text-muted);
+  direction: ltr;
 }
 
 /* Status bar */
@@ -651,6 +699,68 @@ pre {
   padding: 8px 16px;
 }
 
+.composer > .button--icon {
+  padding: 8px;
+}
+
+.queue {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 8px max(16px, calc((100% - 860px) / 2)) 0;
+  list-style: none;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 12.5px;
+}
+
+.queue__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 4px 4px 10px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+}
+
+.queue__text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.queue__item button {
+  padding: 2px 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.queue__item button:hover {
+  color: var(--text);
+  background: var(--border);
+}
+
+.queue__paused {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+}
+
+.queue__paused button {
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
+.queue + .composer {
+  border-top: none;
+}
+
 .composer .composer__attach {
   background: var(--surface);
   color: var(--text);
@@ -844,6 +954,7 @@ pre {
 .skill-form__dir {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
   min-width: 0;
   color: var(--text-muted);
@@ -868,6 +979,10 @@ pre {
   white-space: pre-wrap;
   background: var(--surface-muted);
   border-radius: var(--radius);
+}
+
+.sidebar[hidden] {
+  display: none;
 }
 
 .sidebar__scroll {

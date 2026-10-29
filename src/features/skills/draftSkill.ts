@@ -30,19 +30,21 @@ const SCHEMA = {
   required: ["name", "description", "params", "prompt"],
 };
 
-const INSTRUCTIONS = `請不要繼續執行任務。把我們到目前為止的這段對話整理成一個可重複使用的「技能」，讓我之後換一組輸入就能重做同樣的事。
+const INSTRUCTIONS = `請不要繼續執行任務。把我們到目前為止的這段對話整理成一個可重複使用的「技能」：一份工作流程，之後可以換一組輸入、套用到其他的工作目錄（其他專案）重做同樣的事。
 
 要求：
 - 找出這次流程中「下次會不一樣」的輸入（例如檔案路徑、名稱、網址、數字、日期、要處理的對象），每個做成一個參數。params[].name 用英文 snake_case，label 用繁體中文，defaultValue 填這次對話實際用的值。只對真的會變的東西開參數，不要過度參數化。
+- 技能會在別的目錄執行：不要寫死這次工作目錄的絕對路徑或專案名稱，檔案位置一律寫成相對於工作目錄的路徑；跟這個專案綁定、換專案就不同的東西（例如專案名稱、主要語言、套件管理工具、目錄結構）要嘛做成參數，要嘛寫成「先檢查工作目錄，找出對應的…」的步驟。
 - prompt 是一份完整、可獨立執行的指令：之後會在全新的對話中送出，看不到這段對話。用 {{參數名稱}} 引用參數，每個參數至少用到一次。
+- prompt 開頭先要求了解目前工作目錄（結構、慣例、CLAUDE.md 的記錄），再依序執行步驟，遇到與原專案不同的地方要依實際情況調整。
 - prompt 要寫清楚目標、依序的步驟、這次過程中發現的注意事項與踩過的坑（直接寫成正確做法，不要重蹈覆轍）、以及完成時應該產出什麼。
 - 寫法要通用，不要提到「上次」「剛才的對話」。
 - name、description、prompt 都用繁體中文。`;
 
 /** Asks claude to turn a finished conversation into a skill; the conversation itself is left unchanged. */
-export function draftSkill(cwd: string, claudeSessionId: string, model: string) {
+export function draftSkill(cwd: string | null, claudeSessionId: string, model: string) {
   return skillsApi.askStructured<SkillDraft>({
-    cwd,
+    cwd: cwd ?? undefined,
     resume: claudeSessionId,
     model: model || undefined,
     prompt: INSTRUCTIONS,

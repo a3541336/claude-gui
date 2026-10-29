@@ -1,4 +1,5 @@
 import { ask } from "@tauri-apps/plugin-dialog";
+import { RotateCw } from "lucide-react";
 import type { AccountController } from "./useAccount";
 
 interface Props {
@@ -43,7 +44,9 @@ export function AccountBar({ account, onBeforeLogout }: Props) {
         <span className="account__error" title={state.error}>
           {state.error}
         </span>
-        <button onClick={() => void account.refresh()}>重試</button>
+        <button className="button--icon" title="重試" aria-label="重試" onClick={() => void account.refresh()}>
+          <RotateCw size={14} />
+        </button>
       </footer>
     );
   }

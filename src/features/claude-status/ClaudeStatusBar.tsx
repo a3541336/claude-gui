@@ -6,7 +6,7 @@ const INSTALL_HINT = navigator.userAgent.includes("Windows")
   : "curl -fsSL https://claude.ai/install.sh | bash";
 
 export function ClaudeStatusBar({ claude }: { claude: ClaudeStatusController }) {
-  const { status, check } = claude;
+  const { status, check, install } = claude;
 
   const pickPath = async () => {
     const path = await open({ multiple: false, directory: false, title: "選擇 claude 執行檔" });
@@ -15,6 +15,10 @@ export function ClaudeStatusBar({ claude }: { claude: ClaudeStatusController }) 
 
   if (status.kind === "checking") {
     return <div className="status-bar">正在偵測 claude CLI…</div>;
+  }
+
+  if (status.kind === "installing") {
+    return <div className="status-bar">正在安裝 claude CLI，可能需要幾分鐘…</div>;
   }
 
   if (status.kind === "ready") {
@@ -30,10 +34,13 @@ export function ClaudeStatusBar({ claude }: { claude: ClaudeStatusController }) 
       <div>
         <strong>{status.error}</strong>
         <p>
-          安裝後在終端機執行一次 <code>claude</code> 完成登入：<code>{INSTALL_HINT}</code>
+          可以一鍵安裝，或在終端機手動執行：<code>{INSTALL_HINT}</code>
         </p>
       </div>
       <div className="status-bar__actions">
+        <button className="button--primary" onClick={() => void install()}>
+          一鍵安裝
+        </button>
         <button onClick={() => void check(null)}>重新偵測</button>
         <button onClick={() => void pickPath()}>手動指定路徑</button>
       </div>

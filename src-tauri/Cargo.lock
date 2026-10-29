@@ -338,23 +338,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "claude-gui"
-version = "0.1.0"
-dependencies = [
- "dirs 6.0.0",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-process",
- "tauri-plugin-updater",
- "thiserror 2.0.21",
- "tokio",
- "which",
-]
-
-[[package]]
 name = "combine"
 version = "4.6.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -859,6 +842,23 @@ dependencies = [
  "crc32fast",
  "miniz_oxide 0.9.1",
  "zlib-rs",
+]
+
+[[package]]
+name = "flowloom"
+version = "0.2.0"
+dependencies = [
+ "dirs 6.0.0",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-process",
+ "tauri-plugin-updater",
+ "thiserror 2.0.21",
+ "tokio",
+ "which",
 ]
 
 [[package]]

@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { loadString, saveString } from "../../shared/storage";
 import type { PermissionMode } from "../../shared/types/claude";
 
-const CWD_KEY = "claude-gui.cwd";
-const MODE_KEY = "claude-gui.permissionMode";
-const MODEL_KEY = "claude-gui.model";
+const CWD_KEY = "flowloom.cwd";
+const MODE_KEY = "flowloom.permissionMode";
+const MODEL_KEY = "flowloom.model";
 
 export const PERMISSION_MODES: Array<{ value: PermissionMode; label: string }> = [
   { value: "default", label: "預設（需要時詢問）" },

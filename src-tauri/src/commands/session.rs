@@ -3,7 +3,7 @@ use tauri::{AppHandle, State};
 
 use crate::claude::process::SpawnOptions;
 use crate::error::AppResult;
-use crate::state::AppState;
+use crate::state::{self, AppState};
 
 #[tauri::command]
 pub async fn start_session(
@@ -13,9 +13,10 @@ pub async fn start_session(
     options: SpawnOptions,
 ) -> AppResult<()> {
     let binary = state.resolve_binary().await?;
+    let cwd = state::resolve_cwd(&app, options.cwd.as_deref()).await?;
     state
         .sessions
-        .start(app, session_id, &binary, &options)
+        .start(app, session_id, &binary, &cwd, &options)
         .await
 }
 
@@ -40,6 +41,16 @@ pub async fn respond_to_request(
         .sessions
         .respond(&session_id, &request_id, &response)
         .await
+}
+
+/// Switches a running process's permission mode without restarting it.
+#[tauri::command]
+pub async fn set_permission_mode(
+    state: State<'_, AppState>,
+    session_id: String,
+    mode: String,
+) -> AppResult<String> {
+    state.sessions.set_permission_mode(&session_id, &mode).await
 }
 
 #[tauri::command]

@@ -1,12 +1,12 @@
 [package]
-name = "claude-gui"
-version = "0.1.0"
-description = "Desktop GUI for Claude Code"
+name = "flowloom"
+version = "0.2.0"
+description = "FlowLoom - desktop app for Claude Code"
 edition = "2021"
 
 [lib]
 # The `_lib` suffix avoids a name clash with the bin target on Windows.
-name = "claude_gui_lib"
+name = "flowloom_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

@@ -1,4 +1,5 @@
 import { ask } from "@tauri-apps/plugin-dialog";
+import { X } from "lucide-react";
 import type { UpdatesController, UpdateState } from "./useUpdates";
 
 interface Props {
@@ -12,7 +13,7 @@ export function UpdateBanner({ updates, chatBusy }: Props) {
     if (
       chatBusy &&
       !(await ask("更新後會重新啟動，正在執行的對話會中斷（之後可從歷史紀錄接續）。要繼續嗎？", {
-        title: "更新 Claude GUI",
+        title: "更新 FlowLoom",
         kind: "warning",
       }))
     ) {
@@ -25,7 +26,7 @@ export function UpdateBanner({ updates, chatBusy }: Props) {
     <>
       {updates.app && (
         <Row
-          name="Claude GUI"
+          name="FlowLoom"
           state={updates.app}
           action="更新並重新啟動"
           onInstall={() => void installApp()}
@@ -74,8 +75,13 @@ function Row({ name, state, action, onInstall, onDismiss }: RowProps) {
           <button className="button--primary" onClick={onInstall}>
             {state.kind === "failed" ? "重試" : action}
           </button>
-          <button className="update-banner__dismiss" title="稍後再說" onClick={onDismiss}>
-            ×
+          <button
+            className="update-banner__dismiss button--icon"
+            title="稍後再說"
+            aria-label="稍後再說"
+            onClick={onDismiss}
+          >
+            <X size={14} />
           </button>
         </>
       )}

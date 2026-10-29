@@ -66,6 +66,36 @@ impl<'a> ControlResponse<'a> {
     }
 }
 
+/// A request to claude, answered with a `control_response` on stdout.
+#[derive(Serialize)]
+pub struct ControlRequest<'a> {
+    #[serde(rename = "type")]
+    kind: &'static str,
+    request_id: &'a str,
+    request: ControlRequestBody<'a>,
+}
+
+#[derive(Serialize)]
+#[serde(tag = "subtype", rename_all = "snake_case")]
+enum ControlRequestBody<'a> {
+    SetPermissionMode { mode: &'a str },
+}
+
+impl<'a> ControlRequest<'a> {
+    /// Takes effect immediately, even in the middle of a turn.
+    pub fn set_permission_mode(request_id: &'a str, mode: &'a str) -> Self {
+        Self {
+            kind: "control_request",
+            request_id,
+            request: ControlRequestBody::SetPermissionMode { mode },
+        }
+    }
+
+    pub fn to_line(&self) -> serde_json::Result<Vec<u8>> {
+        to_line(self)
+    }
+}
+
 /// Serialized as one newline-terminated JSON line.
 fn to_line<T: Serialize>(value: &T) -> serde_json::Result<Vec<u8>> {
     let mut line = serde_json::to_vec(value)?;

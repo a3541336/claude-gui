@@ -3,6 +3,7 @@ mod commands;
 mod error;
 mod events;
 mod history;
+mod migrate;
 mod skills;
 mod state;
 
@@ -20,6 +21,7 @@ pub fn run() {
         .manage(AppState::default())
         .setup(|app| {
             let data_dir = app.path().app_data_dir()?;
+            migrate::migrate_data_dir(&data_dir);
             app.manage(HistoryStore::new(data_dir.join("history")));
             app.manage(SkillStore::new(data_dir.join("skills.json")));
             Ok(())
@@ -28,12 +30,14 @@ pub fn run() {
             commands::system::detect_claude,
             commands::system::set_claude_path,
             commands::system::update_claude,
+            commands::system::install_claude,
             commands::auth::auth_status,
             commands::auth::auth_login,
             commands::auth::auth_logout,
             commands::session::start_session,
             commands::session::send_message,
             commands::session::respond_to_request,
+            commands::session::set_permission_mode,
             commands::session::stop_session,
             commands::history::list_history,
             commands::history::save_history,
@@ -43,6 +47,9 @@ pub fn run() {
             commands::skills::save_skill,
             commands::skills::delete_skill,
             commands::skills::ask_structured,
+            commands::project::read_claude_md,
+            commands::project::write_claude_md,
+            commands::project::append_claude_md,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

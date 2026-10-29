@@ -1,6 +1,6 @@
-# Claude GUI
+# FlowLoom
 
-Claude Code 的桌面圖形介面，以 Tauri 2（Rust）+ React 製作，支援 macOS 與 Windows。
+執行 Claude Code 的桌面圖形介面（非 Anthropic 官方產品），以 Tauri 2（Rust）+ React 製作，支援 macOS 與 Windows。
 
 GUI 本身不含 Claude 帳號或 API key，而是呼叫使用者電腦上的 `claude` CLI，
 以 `--input-format stream-json --output-format stream-json` 雙向串流溝通。
@@ -11,7 +11,7 @@ GUI 本身不含 Claude 帳號或 API key，而是呼叫使用者電腦上的 `c
    - macOS：`curl -fsSL https://claude.ai/install.sh | bash`
    - Windows（PowerShell）：`irm https://claude.ai/install.ps1 | iex`
    - 安裝後在終端機執行一次 `claude` 完成登入
-2. 開啟 Claude GUI，選擇工作目錄後即可開始對話。若偵測不到 claude，可在畫面上手動指定路徑。
+2. 開啟 FlowLoom，選擇工作目錄後即可開始對話。若偵測不到 claude，可在畫面上手動指定路徑。
 
 ## 開發
 
@@ -32,7 +32,7 @@ macOS（universal）與 Windows 安裝檔，放到草稿 release。
 git tag v0.1.0 && git push origin v0.1.0
 ```
 
-未簽章的版本：macOS 首次開啟需按右鍵 →「打開」，或執行 `xattr -cr "/Applications/Claude GUI.app"`；
+未簽章的版本：macOS 首次開啟需按右鍵 →「打開」，或執行 `xattr -cr "/Applications/FlowLoom.app"`；
 Windows 會出現 SmartScreen 警告，選「其他資訊 → 仍要執行」。
 
 ## 專案結構

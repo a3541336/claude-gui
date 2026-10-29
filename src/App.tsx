@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AccountBar } from "./features/account/AccountBar";
 import { useAccount } from "./features/account/useAccount";
 import { ChatView } from "./features/chat/ChatView";
@@ -14,9 +14,13 @@ import { useSkills, type Skill } from "./features/skills/useSkills";
 import { UpdateBanner } from "./features/updates/UpdateBanner";
 import { useUpdates } from "./features/updates/useUpdates";
 import { UsageBar } from "./features/usage/UsageBar";
+import { ClaudeMdDialog } from "./features/workspace/ClaudeMdDialog";
 import { WorkspaceBar } from "./features/workspace/WorkspaceBar";
 import { WorkspaceSettings } from "./features/workspace/WorkspaceSettings";
 import { useWorkspace } from "./features/workspace/useWorkspace";
+import { loadString, saveString } from "./shared/storage";
+
+const SIDEBAR_KEY = "flowloom.sidebarCollapsed";
 
 type SkillDialog =
   | { kind: "drafting"; error: string | null }
@@ -31,9 +35,11 @@ export default function App() {
     permissionMode: workspace.permissionMode,
     model: workspace.model,
   });
-  const history = useHistory(chat.state, workspace.cwd);
+  const history = useHistory(chat.conversations);
   const skills = useSkills();
   const [skillDialog, setSkillDialog] = useState<SkillDialog | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => loadString(SIDEBAR_KEY) === "1");
+  useEffect(() => saveString(SIDEBAR_KEY, sidebarCollapsed ? "1" : null), [sidebarCollapsed]);
   // Identifies the latest draft request, so a cancelled one is ignored when it finishes.
   const draftRef = useRef(0);
 
@@ -48,37 +54,45 @@ export default function App() {
       : account.loggedOut
         ? "尚未登入 Claude"
         : null;
-  const disabledReason = claudeUnavailable ?? (!workspace.cwd ? "請先選擇工作目錄" : null);
+  const disabledReason = claudeUnavailable;
+  const [editingClaudeMd, setEditingClaudeMd] = useState(false);
 
   // A different directory is a different project, so start over.
-  const changeCwd = (dir: string) => {
+  const changeCwd = (dir: string | null) => {
     if (dir === workspace.cwd) return;
     workspace.setCwd(dir);
     chat.newChat();
   };
 
-  const newChatIn = (dir: string) => {
+  const newChatIn = (dir: string | null) => {
     workspace.setCwd(dir);
     chat.newChat();
   };
 
   const openConversation = async (id: string) => {
     if (id === chat.state.conversationId) return;
+    // Still open, e.g. running in the background.
+    const open = chat.conversations[id];
+    if (open) {
+      workspace.setCwd(open.cwd);
+      chat.activate(id);
+      return;
+    }
     const saved = await history.load(id);
     if (!saved) return;
     // claude keeps sessions per directory, so resuming needs the original cwd.
     workspace.setCwd(saved.cwd);
-    chat.load(saved.snapshot);
+    chat.load(saved.snapshot, saved.cwd);
   };
 
   // claude resumes sessions per directory, so drafting needs the conversation's cwd.
   const { claudeSessionId, busy } = chat.state;
   const skillSource =
-    !claudeUnavailable && !busy && claudeSessionId && workspace.cwd
+    !claudeUnavailable && !busy && claudeSessionId
       ? { cwd: workspace.cwd, sessionId: claudeSessionId }
       : null;
 
-  const makeSkill = async (cwd: string, sessionId: string) => {
+  const makeSkill = async (cwd: string | null, sessionId: string) => {
     const request = ++draftRef.current;
     setSkillDialog({ kind: "drafting", error: null });
     try {
@@ -96,7 +110,7 @@ export default function App() {
     setSkillDialog(null);
   };
 
-  const runSkill = (prompt: string, cwd: string) => {
+  const runSkill = (prompt: string, cwd: string | null) => {
     setSkillDialog(null);
     workspace.setCwd(cwd);
     void chat.startWith(prompt, cwd);
@@ -104,13 +118,13 @@ export default function App() {
 
   const deleteConversation = (id: string) => {
     // Otherwise the next change to the open conversation would save it again.
-    if (id === chat.state.conversationId) chat.newChat();
+    chat.close(id);
     history.remove(id);
   };
 
   return (
     <div className="app">
-      <aside className="sidebar">
+      <aside className="sidebar" hidden={sidebarCollapsed}>
         <div className="sidebar__scroll">
           <SkillsPanel
             items={skills.items}
@@ -123,34 +137,45 @@ export default function App() {
             items={history.items}
             error={history.error}
             activeId={chat.state.conversationId}
+            statuses={chat.statuses}
             cwd={workspace.cwd}
             onOpen={(id) => void openConversation(id)}
             onDelete={deleteConversation}
             onNewChatIn={newChatIn}
           />
         </div>
-        <AccountBar account={account} onBeforeLogout={chat.stop} />
+        <AccountBar account={account} onBeforeLogout={chat.stopAll} />
       </aside>
       <div className="app__main">
         <WorkspaceBar
           workspace={workspace}
           onChangeCwd={changeCwd}
+          onEditClaudeMd={() => setEditingClaudeMd(true)}
           onNewChat={chat.newChat}
+          sidebarCollapsed={sidebarCollapsed}
+          onToggleSidebar={() => setSidebarCollapsed((v) => !v)}
           onMakeSkill={
             skillSource ? () => void makeSkill(skillSource.cwd, skillSource.sessionId) : undefined
           }
         />
-        <UpdateBanner updates={updates} chatBusy={chat.state.busy} />
+        <UpdateBanner updates={updates} chatBusy={chat.anyBusy} />
         <ClaudeStatusBar claude={claude} />
         <ChatView chat={chat} disabledReason={disabledReason} cwd={workspace.cwd} />
         <UsageBar
           model={chat.state.model}
           contextTokens={chat.state.contextTokens}
           contextWindow={chat.state.contextWindow}
-          rateLimits={chat.state.rateLimits}
+          rateLimits={chat.rateLimits}
         />
         <WorkspaceSettings workspace={workspace} />
       </div>
+      {editingClaudeMd && (
+        <ClaudeMdDialog
+          cwd={workspace.cwd}
+          onSaved={() => chat.reloadProject(workspace.cwd, "CLAUDE.md 已更新，下次送出時套用")}
+          onClose={() => setEditingClaudeMd(false)}
+        />
+      )}
       {skillDialog?.kind === "drafting" && (
         <SkillDrafting error={skillDialog.error} onClose={closeSkillDialog} />
       )}

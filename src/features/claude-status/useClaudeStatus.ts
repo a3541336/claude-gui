@@ -2,10 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 import { claudeApi, type ClaudeInfo } from "../../shared/api/claude";
 import { loadString, saveString } from "../../shared/storage";
 
-const PATH_KEY = "claude-gui.claudePath";
+const PATH_KEY = "flowloom.claudePath";
 
 export type ClaudeStatus =
   | { kind: "checking" }
+  | { kind: "installing" }
   | { kind: "ready"; info: ClaudeInfo }
   | { kind: "missing"; error: string };
 
@@ -25,11 +26,23 @@ export function useClaudeStatus() {
     }
   }, []);
 
+  /** Installs claude, then detects it automatically. */
+  const install = useCallback(async () => {
+    setStatus({ kind: "installing" });
+    try {
+      await claudeApi.install();
+    } catch (e) {
+      setStatus({ kind: "missing", error: String(e) });
+      return;
+    }
+    await check(null);
+  }, [check]);
+
   useEffect(() => {
     void check();
   }, [check]);
 
-  return { status, check };
+  return { status, check, install };
 }
 
 export type ClaudeStatusController = ReturnType<typeof useClaudeStatus>;

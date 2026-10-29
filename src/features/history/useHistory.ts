@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { historyApi, type ConversationMeta } from "../../shared/api/history";
-import type { ChatEntry, ChatSnapshot, ChatState } from "../chat/chatReducer";
+import type { ChatEntry, ChatSnapshot } from "../chat/chatReducer";
+import type { Conversation } from "../chat/chatsReducer";
 
 export type { ConversationMeta };
 
 /** Saved conversations, persisted to files by the backend. */
-export function useHistory(chat: ChatState, cwd: string | null) {
+export function useHistory(conversations: Record<string, Conversation>) {
   const [items, setItems] = useState<ConversationMeta[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,27 +30,43 @@ export function useHistory(chat: ChatState, cwd: string | null) {
     );
   }, [serial]);
 
-  // Save the current conversation whenever it changes.
-  const { conversationId, updatedAt, entries, claudeSessionId, model } = chat;
+  // Save each open conversation whenever it changes; they can run side by side.
+  const lastSaved = useRef(new Map<string, Conversation["chat"]>());
   useEffect(() => {
-    if (!conversationId || updatedAt === null || !cwd || entries.length === 0) return;
-    const meta: ConversationMeta = {
-      id: conversationId,
-      title: titleOf(entries),
-      cwd,
-      updatedAt,
-      claudeSessionId,
-      model,
-    };
-    setItems((prev) => sortItems([meta, ...prev.filter((item) => item.id !== meta.id)]));
-    serial(() => historyApi.save(meta, entries)).then(
-      () => setError(null),
-      (e) => setError(`對話紀錄儲存失敗：${e}`),
-    );
-  }, [conversationId, updatedAt, entries, claudeSessionId, model, cwd, serial]);
+    for (const { cwd, chat } of Object.values(conversations)) {
+      const { conversationId, updatedAt, entries, claudeSessionId, model } = chat;
+      if (updatedAt === null || entries.length === 0) continue;
+      const prev = lastSaved.current.get(conversationId);
+      if (
+        prev?.entries === entries &&
+        prev.updatedAt === updatedAt &&
+        prev.claudeSessionId === claudeSessionId &&
+        prev.model === model
+      ) {
+        continue;
+      }
+      lastSaved.current.set(conversationId, chat);
+      const meta: ConversationMeta = {
+        id: conversationId,
+        title: titleOf(entries),
+        cwd,
+        updatedAt,
+        claudeSessionId,
+        model,
+      };
+      setItems((prev) => sortItems([meta, ...prev.filter((item) => item.id !== meta.id)]));
+      serial(() => historyApi.save(meta, entries)).then(
+        () => setError(null),
+        (e) => setError(`對話紀錄儲存失敗：${e}`),
+      );
+    }
+    for (const id of lastSaved.current.keys()) {
+      if (!conversations[id]) lastSaved.current.delete(id);
+    }
+  }, [conversations, serial]);
 
   const load = useCallback(
-    async (id: string): Promise<{ cwd: string; snapshot: ChatSnapshot } | null> => {
+    async (id: string): Promise<{ cwd: string | null; snapshot: ChatSnapshot } | null> => {
       const meta = items.find((item) => item.id === id);
       if (!meta) return null;
       try {
@@ -74,6 +91,7 @@ export function useHistory(chat: ChatState, cwd: string | null) {
 
   const remove = useCallback(
     (id: string) => {
+      lastSaved.current.delete(id);
       setItems((prev) => prev.filter((item) => item.id !== id));
       serial(() => historyApi.delete(id)).catch((e) => setError(`對話紀錄刪除失敗：${e}`));
     },

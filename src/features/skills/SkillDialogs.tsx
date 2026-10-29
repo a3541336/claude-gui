@@ -1,22 +1,9 @@
-import { useState, type ReactNode } from "react";
+import { open } from "@tauri-apps/plugin-dialog";
+import { FolderOpen, Plus, X } from "lucide-react";
+import { useState } from "react";
 import type { Skill, SkillParam } from "../../shared/api/skills";
+import { Modal } from "../../shared/components/Modal";
 import { PARAM_NAME, placeholdersOf, renderPrompt } from "./template";
-
-function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
-  return (
-    <div className="modal" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal__panel" role="dialog" aria-label={title}>
-        <div className="modal__header">
-          <span>{title}</span>
-          <button className="modal__close" title="關閉" onClick={onClose}>
-            ×
-          </button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
 
 /** Shown while claude turns the conversation into a skill. */
 export function SkillDrafting({ error, onClose }: { error: string | null; onClose: () => void }) {
@@ -80,7 +67,10 @@ export function SkillEditor({ skill: initial, isNew, onSave, onClose }: EditorPr
 
         <div className="skill-form__section">
           <span>參數</span>
-          <button onClick={() => addParam()}>新增參數</button>
+          <button className="button--icon" onClick={() => addParam()}>
+            <Plus size={14} />
+            新增參數
+          </button>
         </div>
         {skill.params.length === 0 && <p className="skill-form__hint">沒有參數，每次執行內容都相同。</p>}
         {skill.params.map((param, i) => (
@@ -102,10 +92,12 @@ export function SkillEditor({ skill: initial, isNew, onSave, onClose }: EditorPr
               onChange={(e) => setParam(i, { defaultValue: e.target.value })}
             />
             <button
+              className="button--icon"
               title="移除參數"
+              aria-label="移除參數"
               onClick={() => set({ params: skill.params.filter((_, j) => j !== i) })}
             >
-              ×
+              <X size={14} />
             </button>
             <input
               className="skill-form__param-desc"
@@ -129,8 +121,9 @@ export function SkillEditor({ skill: initial, isNew, onSave, onClose }: EditorPr
           <p className="skill-form__warning">
             提示詞用到未定義的參數：
             {missing.map((name) => (
-              <button key={name} onClick={() => addParam(name)} title="新增此參數">
-                ＋{name}
+              <button key={name} className="button--icon" onClick={() => addParam(name)} title="新增此參數">
+                <Plus size={12} />
+                {name}
               </button>
             ))}
           </p>
@@ -157,9 +150,10 @@ export function SkillEditor({ skill: initial, isNew, onSave, onClose }: EditorPr
 interface RunnerProps {
   skill: Skill;
   cwd: string | null;
-  /** Why claude can't run right now, if it can't; a missing cwd is checked here. */
+  /** Why claude can't run right now, if it can't. */
   unavailableReason: string | null;
-  onRun: (prompt: string, cwd: string) => void;
+  /** A null `cwd` runs it as a chat without a project. */
+  onRun: (prompt: string, cwd: string | null) => void;
   onClose: () => void;
 }
 
@@ -169,7 +163,17 @@ export function SkillRunner({ skill, cwd, unavailableReason, onRun, onClose }: R
   );
   const [dir, setDir] = useState(cwd ?? skill.sourceCwd);
   const prompt = renderPrompt(skill.prompt, values);
-  const reason = unavailableReason ?? (dir ? null : "請先選擇工作目錄");
+  const reason = unavailableReason;
+
+  const pickDirectory = async () => {
+    const picked = await open({
+      directory: true,
+      multiple: false,
+      title: "選擇要套用技能的工作目錄",
+      defaultPath: dir ?? undefined,
+    });
+    if (typeof picked === "string") setDir(picked);
+  };
 
   return (
     <Modal title={skill.name} onClose={onClose}>
@@ -196,7 +200,7 @@ export function SkillRunner({ skill, cwd, unavailableReason, onRun, onClose }: R
         <div className="skill-form__dir">
           <span>工作目錄：</span>
           <span className="skill-form__mono" title={dir ?? ""}>
-            {dir ?? "（未選擇）"}
+            {dir ?? "（閒聊，不指定工作目錄）"}
           </span>
           {skill.sourceCwd && dir !== skill.sourceCwd && (
             <button onClick={() => setDir(skill.sourceCwd)} title={skill.sourceCwd}>
@@ -204,6 +208,11 @@ export function SkillRunner({ skill, cwd, unavailableReason, onRun, onClose }: R
             </button>
           )}
           {cwd && dir !== cwd && <button onClick={() => setDir(cwd)}>改用目前目錄</button>}
+          <button className="button--icon" onClick={() => void pickDirectory()}>
+            <FolderOpen size={14} />
+            選擇其他目錄…
+          </button>
+          {dir && <button onClick={() => setDir(null)}>改為閒聊</button>}
         </div>
         <details>
           <summary>預覽送出的內容</summary>
@@ -216,7 +225,7 @@ export function SkillRunner({ skill, cwd, unavailableReason, onRun, onClose }: R
         <button
           className="button--primary"
           disabled={reason !== null}
-          onClick={() => dir && onRun(prompt, dir)}
+          onClick={() => onRun(prompt, dir)}
         >
           在新對話執行
         </button>

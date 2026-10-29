@@ -1,10 +1,28 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
+use tauri::{AppHandle, Manager};
 use tokio::sync::Mutex;
 
 use crate::claude::locator::{self, ClaudeBinary};
 use crate::claude::session::SessionManager;
 use crate::error::AppResult;
+
+/// Where claude runs for conversations without a project: an empty directory
+/// of our own, so it neither reads nor changes the user's files by accident.
+/// A resumed conversation must run in the same directory, so this never changes.
+pub async fn chat_dir(app: &AppHandle) -> AppResult<PathBuf> {
+    let dir = app.path().app_data_dir()?.join("chat");
+    tokio::fs::create_dir_all(&dir).await?;
+    Ok(dir)
+}
+
+/// `cwd`, or [`chat_dir`] when there is none.
+pub async fn resolve_cwd(app: &AppHandle, cwd: Option<&Path>) -> AppResult<PathBuf> {
+    match cwd {
+        Some(cwd) => Ok(cwd.to_path_buf()),
+        None => chat_dir(app).await,
+    }
+}
 
 #[derive(Default)]
 pub struct AppState {
