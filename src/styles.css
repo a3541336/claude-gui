@@ -1067,19 +1067,22 @@ button.skills__group-header:hover {
   gap: 10px;
 }
 
-.skill-form label {
+.skill-form label,
+.skill-form__field {
   display: flex;
   flex-direction: column;
   gap: 4px;
   color: var(--text-muted);
 }
 
-.skill-form label small {
+.skill-form label small,
+.skill-form__field small {
   font-size: 12px;
 }
 
 .skill-form input,
-.skill-form textarea {
+.skill-form textarea,
+.skill-form select {
   font: inherit;
   color: var(--text);
   background: var(--bg);
@@ -1108,8 +1111,55 @@ button.skills__group-header:hover {
 
 .skill-form__param {
   display: grid;
-  grid-template-columns: 1fr 1fr 1.4fr auto;
+  grid-template-columns: 1fr 1fr 0.8fr auto;
   gap: 6px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--border);
+}
+
+.skill-form__param-wide {
+  grid-column: 1 / -1;
+}
+
+.skill-form__param-default {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--text-muted);
+}
+
+.skill-form__param-default small,
+.skill-form__param-wide small {
+  font-size: 12px;
+}
+
+.skill-form .skill-form__check {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.skill-form__toggle {
+  display: flex;
+  gap: 6px;
+}
+
+.skill-form__toggle button {
+  min-width: 56px;
+}
+
+.skill-form__path {
+  display: flex;
+  gap: 6px;
+}
+
+.skill-form__path input {
+  flex: 1;
+}
+
+.skill-form__path button {
+  flex-shrink: 0;
 }
 
 .skill-form__param-desc {

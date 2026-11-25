@@ -3,12 +3,29 @@
 
 import { invoke } from "@tauri-apps/api/core";
 
+/** How a parameter's value is entered when the skill runs. */
+export type ParamType =
+  | "text"
+  | "multiline"
+  | "number"
+  | "date"
+  | "datetime"
+  | "time"
+  | "select"
+  | "boolean"
+  | "file"
+  | "directory";
+
 export interface SkillParam {
   /** Referenced in the prompt as `{{name}}`. */
   name: string;
   label: string;
   description: string;
   defaultValue: string;
+  /** Missing in skills saved before types existed; see `typeOf`. */
+  type?: ParamType;
+  /** Choices of a `select` parameter. */
+  options?: string[];
 }
 
 export interface Skill {

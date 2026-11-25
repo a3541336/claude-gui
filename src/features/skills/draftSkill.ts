@@ -1,4 +1,5 @@
 import { skillsApi, type SkillParam } from "../../shared/api/skills";
+import { PARAM_TYPE_VALUES } from "./paramTypes";
 
 export interface SkillDraft {
   name: string;
@@ -21,8 +22,10 @@ const SCHEMA = {
           label: { type: "string" },
           description: { type: "string" },
           defaultValue: { type: "string" },
+          type: { type: "string", enum: PARAM_TYPE_VALUES },
+          options: { type: "array", items: { type: "string" } },
         },
-        required: ["name", "label", "description", "defaultValue"],
+        required: ["name", "label", "description", "defaultValue", "type", "options"],
       },
     },
     prompt: { type: "string" },
@@ -34,6 +37,7 @@ const INSTRUCTIONS = `請不要繼續執行任務。把我們到目前為止的�
 
 要求：
 - 找出這次流程中「下次會不一樣」的輸入（例如檔案路徑、名稱、網址、數字、日期、要處理的對象），每個做成一個參數。params[].name 用英文 snake_case，label 用繁體中文，defaultValue 填這次對話實際用的值。只對真的會變的東西開參數，不要過度參數化。
+- 每個參數設定 type，決定執行時用什麼欄位輸入：text（單行文字）、multiline（多行文字）、number（數字）、date（日期，defaultValue 格式 YYYY-MM-DD）、datetime（日期時間，YYYY-MM-DDTHH:MM）、time（時間，HH:MM）、select（從固定選項中挑一個，選項放在 options，defaultValue 必須是其中之一）、boolean（是／否，defaultValue 填「是」或「否」）、file（檔案路徑）、directory（資料夾路徑）。非 select 的 options 給空陣列。日期或時間若通常是「執行當天／當下」，defaultValue 填 @now。
 - 技能會在別的目錄執行：不要寫死這次工作目錄的絕對路徑或專案名稱，檔案位置一律寫成相對於工作目錄的路徑；跟這個專案綁定、換專案就不同的東西（例如專案名稱、主要語言、套件管理工具、目錄結構）要嘛做成參數，要嘛寫成「先檢查工作目錄，找出對應的…」的步驟。
 - prompt 是一份完整、可獨立執行的指令：之後會在全新的對話中送出，看不到這段對話。用 {{參數名稱}} 引用參數，每個參數至少用到一次。
 - prompt 開頭先要求了解目前工作目錄（結構、慣例、CLAUDE.md 的記錄），再依序執行步驟，遇到與原專案不同的地方要依實際情況調整。

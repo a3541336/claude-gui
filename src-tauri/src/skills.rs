@@ -20,6 +20,13 @@ pub struct SkillParam {
     pub description: String,
     #[serde(default)]
     pub default_value: String,
+    /// How the value is entered: text, number, date, select, …; empty for
+    /// skills saved before types existed. Interpreted by the frontend.
+    #[serde(default, rename = "type")]
+    pub param_type: String,
+    /// Choices of a `select` parameter.
+    #[serde(default)]
+    pub options: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

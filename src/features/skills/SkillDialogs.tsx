@@ -1,8 +1,22 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { FolderOpen, Plus, X } from "lucide-react";
 import { useState } from "react";
-import type { Skill, SkillParam } from "../../shared/api/skills";
+import type { ParamType, Skill, SkillParam } from "../../shared/api/skills";
 import { Modal } from "../../shared/components/Modal";
+import {
+  CURRENT,
+  formatValue,
+  initialValue,
+  isTemporal,
+  NO,
+  optionsOf,
+  PARAM_TYPES,
+  ParamInput,
+  paramProblem,
+  typeOf,
+  valueProblem,
+  YES,
+} from "./paramTypes";
 import { PARAM_NAME, placeholdersOf, renderPrompt } from "./template";
 
 /** Shown while claude turns the conversation into a skill. */
@@ -39,7 +53,20 @@ export function SkillEditor({ skill: initial, isNew, groups, onSave, onClose }: 
   const setParam = (i: number, patch: Partial<SkillParam>) =>
     set({ params: skill.params.map((p, j) => (j === i ? { ...p, ...patch } : p)) });
   const addParam = (name = "") =>
-    set({ params: [...skill.params, { name, label: name, description: "", defaultValue: "" }] });
+    set({
+      params: [
+        ...skill.params,
+        { name, label: name, description: "", defaultValue: "", type: "text", options: [] },
+      ],
+    });
+  /** Keeps the default only where it still fits the new type. */
+  const setType = (i: number, type: ParamType) => {
+    const param = { ...skill.params[i], type };
+    const fits =
+      param.defaultValue === CURRENT ? isTemporal(type) : valueProblem(param, param.defaultValue) === null;
+    const defaultValue = type === "boolean" ? NO : fits ? param.defaultValue : "";
+    setParam(i, { type, defaultValue, options: type === "select" ? (param.options ?? []) : [] });
+  };
 
   const names = skill.params.map((p) => p.name);
   const used = placeholdersOf(skill.prompt);
@@ -53,7 +80,7 @@ export function SkillEditor({ skill: initial, isNew, groups, onSave, onClose }: 
         ? "參數名稱只能用英文字母、數字與底線，且不能以數字開頭"
         : new Set(names).size !== names.length
           ? "參數名稱不能重複"
-          : null;
+          : (skill.params.map(paramProblem).find((p) => p !== null) ?? null);
 
   return (
     <Modal title={isNew ? "儲存為技能" : "編輯技能"} onClose={onClose}>
@@ -102,11 +129,17 @@ export function SkillEditor({ skill: initial, isNew, groups, onSave, onClose }: 
               value={param.label}
               onChange={(e) => setParam(i, { label: e.target.value })}
             />
-            <input
-              placeholder="預設值"
-              value={param.defaultValue}
-              onChange={(e) => setParam(i, { defaultValue: e.target.value })}
-            />
+            <select
+              title="輸入型態"
+              value={typeOf(param)}
+              onChange={(e) => setType(i, e.target.value as ParamType)}
+            >
+              {PARAM_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
             <button
               className="button--icon"
               title="移除參數"
@@ -115,6 +148,51 @@ export function SkillEditor({ skill: initial, isNew, groups, onSave, onClose }: 
             >
               <X size={14} />
             </button>
+            {typeOf(param) === "select" && (
+              <label className="skill-form__param-wide">
+                <small>選項（一行一個）</small>
+                <textarea
+                  rows={3}
+                  value={(param.options ?? []).join("\n")}
+                  onChange={(e) => {
+                    const options = e.target.value.split("\n");
+                    const kept = options.map((o) => o.trim()).filter(Boolean);
+                    setParam(i, {
+                      options,
+                      defaultValue: kept.includes(param.defaultValue) ? param.defaultValue : (kept[0] ?? ""),
+                    });
+                  }}
+                  onBlur={() =>
+                    setParam(i, { options: (param.options ?? []).map((o) => o.trim()).filter(Boolean) })
+                  }
+                />
+              </label>
+            )}
+            <div className="skill-form__param-wide skill-form__param-default">
+              <small>預設值</small>
+              {isTemporal(typeOf(param)) && param.defaultValue === CURRENT ? (
+                <span className="skill-form__hint">
+                  執行時自動填入當下的{typeOf(param) === "date" ? "日期" : "時間"}
+                </span>
+              ) : (
+                <ParamInput
+                  param={param}
+                  value={typeOf(param) === "boolean" && param.defaultValue !== YES ? NO : param.defaultValue}
+                  onChange={(defaultValue) => setParam(i, { defaultValue })}
+                  dir={skill.sourceCwd}
+                />
+              )}
+              {isTemporal(typeOf(param)) && (
+                <label className="skill-form__check">
+                  <input
+                    type="checkbox"
+                    checked={param.defaultValue === CURRENT}
+                    onChange={(e) => setParam(i, { defaultValue: e.target.checked ? CURRENT : "" })}
+                  />
+                  預設為執行當下
+                </label>
+              )}
+            </div>
             <input
               className="skill-form__param-desc"
               placeholder="說明（執行時顯示）"
@@ -157,6 +235,7 @@ export function SkillEditor({ skill: initial, isNew, groups, onSave, onClose }: 
           onClick={() =>
             onSave({
               ...skill,
+              params: skill.params.map((p) => ({ ...p, type: typeOf(p), options: optionsOf(p) })),
               name: skill.name.trim(),
               group: skill.group?.trim() ?? "",
               updatedAt: Date.now(),
@@ -182,11 +261,15 @@ interface RunnerProps {
 
 export function SkillRunner({ skill, cwd, unavailableReason, onRun, onClose }: RunnerProps) {
   const [values, setValues] = useState<Record<string, string>>(() =>
-    Object.fromEntries(skill.params.map((p) => [p.name, p.defaultValue])),
+    Object.fromEntries(skill.params.map((p) => [p.name, initialValue(p)])),
   );
   const [dir, setDir] = useState(cwd ?? skill.sourceCwd);
-  const prompt = renderPrompt(skill.prompt, values);
-  const reason = unavailableReason;
+  const prompt = renderPrompt(
+    skill.prompt,
+    Object.fromEntries(skill.params.map((p) => [p.name, formatValue(p, values[p.name] ?? "")])),
+  );
+  const invalid = skill.params.map((p) => valueProblem(p, values[p.name] ?? "")).find((p) => p !== null);
+  const reason = unavailableReason ?? invalid ?? null;
 
   const pickDirectory = async () => {
     const picked = await open({
@@ -202,24 +285,22 @@ export function SkillRunner({ skill, cwd, unavailableReason, onRun, onClose }: R
     <Modal title={skill.name} onClose={onClose}>
       <div className="modal__body skill-form">
         {skill.description && <p className="skill-form__hint">{skill.description}</p>}
-        {skill.params.map((param) => (
-          <label key={param.name}>
-            {param.label || param.name}
-            {param.description && <small>{param.description}</small>}
-            {param.defaultValue.includes("\n") ? (
-              <textarea
-                rows={4}
-                value={values[param.name]}
-                onChange={(e) => setValues({ ...values, [param.name]: e.target.value })}
+        {skill.params.map((param) => {
+          // A label would press the first 是／否 button when its text is clicked.
+          const Field = typeOf(param) === "boolean" ? "div" : "label";
+          return (
+            <Field key={param.name} className="skill-form__field">
+              {param.label || param.name}
+              {param.description && <small>{param.description}</small>}
+              <ParamInput
+                param={param}
+                value={values[param.name] ?? ""}
+                onChange={(value) => setValues((prev) => ({ ...prev, [param.name]: value }))}
+                dir={dir}
               />
-            ) : (
-              <input
-                value={values[param.name]}
-                onChange={(e) => setValues({ ...values, [param.name]: e.target.value })}
-              />
-            )}
-          </label>
-        ))}
+            </Field>
+          );
+        })}
         <div className="skill-form__dir">
           <span>工作目錄：</span>
           <span className="skill-form__mono" title={dir ?? ""}>
