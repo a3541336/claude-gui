@@ -46,10 +46,12 @@ pub fn run() {
             commands::skills::list_skills,
             commands::skills::save_skill,
             commands::skills::delete_skill,
+            commands::skills::reorder_skills,
             commands::skills::ask_structured,
             commands::project::read_claude_md,
             commands::project::write_claude_md,
             commands::project::append_claude_md,
+            commands::files::read_image_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

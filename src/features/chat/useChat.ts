@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef } from "react";
 import { claudeApi } from "../../shared/api/claude";
+import type { ImageAttachment } from "../../shared/images";
 import { projectApi } from "../../shared/api/project";
 import type {
   AssistantLine,
@@ -9,7 +10,7 @@ import type {
 } from "../../shared/types/claude";
 import { PERMISSION_MODES } from "../workspace/useWorkspace";
 import type { ChatAction, ChatSnapshot } from "./chatReducer";
-import { chatsReducer, createChatsState, isActive } from "./chatsReducer";
+import { chatsReducer, createChatsState, isActive, type OutgoingMessage } from "./chatsReducer";
 
 interface Options {
   /** Directory for a conversation that hasn't sent anything yet; null chats without a project. */
@@ -193,8 +194,8 @@ export function useChat({ cwd, permissionMode, model }: Options) {
   );
 
   const deliver = useCallback(
-    async (id: string, text: string, dir: string | null, resume: string | null) => {
-      dispatch({ type: "sent", id, text, cwd: dir });
+    async (id: string, message: OutgoingMessage, dir: string | null, resume: string | null) => {
+      dispatch({ type: "sent", id, message, cwd: dir });
       try {
         let pid = processes.current.get(id);
         if (!pid) {
@@ -207,7 +208,7 @@ export function useChat({ cwd, permissionMode, model }: Options) {
             resume: resume ?? undefined,
           });
         }
-        await claudeApi.sendMessage(pid, text);
+        await claudeApi.sendMessage(pid, message.text, message.images);
       } catch (e) {
         detach(id);
         chatAction(id, { type: "error", text: String(e) });
@@ -221,34 +222,35 @@ export function useChat({ cwd, permissionMode, model }: Options) {
     for (const [id, conv] of Object.entries(state.conversations)) {
       if (conv.chat.busy || conv.queued.length === 0 || conv.queuePaused) continue;
       dispatch({ type: "clearQueue", id });
-      void deliver(id, conv.queued.join("\n\n"), conv.cwd, conv.chat.claudeSessionId);
+      void deliver(id, combine(conv.queued), conv.cwd, conv.chat.claudeSessionId);
     }
   }, [state.conversations, deliver]);
 
   /**
    * Sends to the shown conversation, or queues the message while claude is busy.
-   * Anything still queued goes out with it; empty `text` sends just the queue.
+   * Anything still queued goes out with it; an empty message sends just the queue.
    */
   const send = useCallback(
-    async (text: string) => {
+    async (text: string, images: ImageAttachment[] = []) => {
       const { activeId: id, conversations } = stateRef.current;
       const conv = conversations[id];
       // A started conversation keeps its directory; claude resumes it only from there.
       const dir = conv.chat.updatedAt === null ? cwd : conv.cwd;
-      const note = memoryNote(text);
+      const note = images.length === 0 ? memoryNote(text) : null;
       if (note) {
         await remember(id, note, dir);
         return;
       }
-      const messages = [...conv.queued, text].filter((m) => m.trim());
+      const message = { text, images };
+      const messages = [...conv.queued, message].filter((m) => !isEmpty(m));
       if (messages.length === 0) return;
       if (conv.chat.busy) {
-        if (!text.trim()) return;
-        dispatch({ type: "enqueue", id, text });
+        if (isEmpty(message)) return;
+        dispatch({ type: "enqueue", id, message });
         return;
       }
       if (conv.queued.length > 0) dispatch({ type: "clearQueue", id });
-      await deliver(id, messages.join("\n\n"), dir, conv.chat.claudeSessionId);
+      await deliver(id, combine(messages), dir, conv.chat.claudeSessionId);
     },
     [cwd, deliver, remember],
   );
@@ -296,7 +298,7 @@ export function useChat({ cwd, permissionMode, model }: Options) {
       leave();
       const id = crypto.randomUUID();
       dispatch({ type: "open", id, cwd: dir });
-      await deliver(id, text, dir, null);
+      await deliver(id, { text, images: [] }, dir, null);
     },
     [leave, deliver],
   );
@@ -379,6 +381,21 @@ export function useChat({ cwd, permissionMode, model }: Options) {
 }
 
 export type ChatController = ReturnType<typeof useChat>;
+
+function isEmpty(message: OutgoingMessage): boolean {
+  return !message.text.trim() && message.images.length === 0;
+}
+
+/** Queued messages go out as one, their images first like any other message. */
+function combine(messages: OutgoingMessage[]): OutgoingMessage {
+  return {
+    text: messages
+      .map((m) => m.text)
+      .filter((t) => t.trim())
+      .join("\n\n"),
+    images: messages.flatMap((m) => m.images),
+  };
+}
 
 /** The note in a `# …` message, which goes to CLAUDE.md instead of claude. */
 function memoryNote(text: string): string | null {

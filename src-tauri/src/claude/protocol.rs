@@ -1,24 +1,55 @@
 //! Messages written to claude's stdin (`--input-format stream-json`).
 //! Output lines are forwarded to the frontend untouched, which owns their types.
 
-use serde::Serialize;
-use serde_json::Value;
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
 
 #[derive(Serialize)]
-pub struct UserInput<'a> {
+pub struct UserInput {
     #[serde(rename = "type")]
     kind: &'static str,
-    message: UserMessage<'a>,
+    message: UserMessage,
 }
 
 #[derive(Serialize)]
-struct UserMessage<'a> {
+struct UserMessage {
     role: &'static str,
-    content: &'a str,
+    /// A plain string, or content blocks when images are attached.
+    content: Value,
 }
 
-impl<'a> UserInput<'a> {
-    pub fn text(content: &'a str) -> Self {
+/// An image attached to a user message, already base64-encoded by the frontend.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImageInput {
+    /// e.g. `image/png`; must be a type the API accepts.
+    pub media_type: String,
+    pub data: String,
+}
+
+impl UserInput {
+    pub fn new(text: &str, images: &[ImageInput]) -> Self {
+        let content = if images.is_empty() {
+            Value::String(text.to_string())
+        } else {
+            let mut blocks: Vec<Value> = images
+                .iter()
+                .map(|image| {
+                    json!({
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": image.media_type,
+                            "data": image.data,
+                        },
+                    })
+                })
+                .collect();
+            if !text.trim().is_empty() {
+                blocks.push(json!({ "type": "text", "text": text }));
+            }
+            Value::Array(blocks)
+        };
         Self {
             kind: "user",
             message: UserMessage {

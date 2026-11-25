@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Markdown } from "../../shared/components/Markdown";
+import { dataUrl } from "../../shared/images";
 import { NoticeBlock } from "./blocks/NoticeBlock";
 import { PermissionBlock, type RespondFn } from "./blocks/PermissionBlock";
 import { QuestionBlock } from "./blocks/QuestionBlock";
@@ -63,7 +64,18 @@ function DraftView({ draft }: { draft: Draft }) {
 function EntryView({ entry, onRespond }: { entry: ChatEntry; onRespond: RespondFn }) {
   switch (entry.kind) {
     case "user":
-      return <div className="entry entry--user">{entry.text}</div>;
+      return (
+        <div className="entry entry--user">
+          {entry.images && entry.images.length > 0 && (
+            <div className="entry__images">
+              {entry.images.map((image, i) => (
+                <img key={i} src={dataUrl(image)} alt={image.name ?? "圖片"} title={image.name} />
+              ))}
+            </div>
+          )}
+          {entry.text}
+        </div>
+      );
     case "text":
       return (
         <div className="entry entry--assistant">

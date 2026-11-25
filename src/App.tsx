@@ -10,7 +10,7 @@ import { useHistory } from "./features/history/useHistory";
 import { draftSkill } from "./features/skills/draftSkill";
 import { SkillDrafting, SkillEditor, SkillRunner } from "./features/skills/SkillDialogs";
 import { SkillsPanel } from "./features/skills/SkillsPanel";
-import { useSkills, type Skill } from "./features/skills/useSkills";
+import { groupOf, useSkills, type Skill } from "./features/skills/useSkills";
 import { UpdateBanner } from "./features/updates/UpdateBanner";
 import { useUpdates } from "./features/updates/useUpdates";
 import { UsageBar } from "./features/usage/UsageBar";
@@ -132,6 +132,8 @@ export default function App() {
             onRun={(skill) => setSkillDialog({ kind: "run", skill })}
             onEdit={(skill) => setSkillDialog({ kind: "edit", skill, isNew: false })}
             onDelete={(id) => void skills.remove(id)}
+            onReorder={(ordered) => void skills.reorder(ordered)}
+            onSetGroup={(items, group) => void skills.setGroup(items, group)}
           />
           <HistorySidebar
             items={history.items}
@@ -183,6 +185,7 @@ export default function App() {
         <SkillEditor
           skill={skillDialog.skill}
           isNew={skillDialog.isNew}
+          groups={[...new Set(skills.items.map(groupOf).filter(Boolean))]}
           onSave={async (skill) => {
             if (await skills.save(skill)) setSkillDialog(null);
           }}

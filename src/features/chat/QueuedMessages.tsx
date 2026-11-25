@@ -1,7 +1,8 @@
 import { SendHorizontal, X } from "lucide-react";
+import type { OutgoingMessage } from "./chatsReducer";
 
 interface Props {
-  items: string[];
+  items: OutgoingMessage[];
   onRemove: (index: number) => void;
   /** Present once the turn was interrupted, so the queue no longer goes out by itself. */
   onSendNow?: () => void;
@@ -11,9 +12,12 @@ interface Props {
 export function QueuedMessages({ items, onRemove, onSendNow }: Props) {
   return (
     <ul className="queue" aria-label="排隊中的訊息">
-      {items.map((text, i) => (
+      {items.map(({ text, images }, i) => (
         <li key={i} className="queue__item" title={text}>
-          <span className="queue__text">排隊中：{text}</span>
+          <span className="queue__text">
+            排隊中：{images.length > 0 && `［${images.length} 張圖片］`}
+            {text}
+          </span>
           <button
             className="button--icon"
             title="取消這則"

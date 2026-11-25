@@ -26,12 +26,14 @@ export function SkillDrafting({ error, onClose }: { error: string | null; onClos
 interface EditorProps {
   skill: Skill;
   isNew: boolean;
+  /** Existing categories, offered as suggestions. */
+  groups: string[];
   onSave: (skill: Skill) => void;
   onClose: () => void;
 }
 
 /** Everything claude drafted can be changed before it is saved. */
-export function SkillEditor({ skill: initial, isNew, onSave, onClose }: EditorProps) {
+export function SkillEditor({ skill: initial, isNew, groups, onSave, onClose }: EditorProps) {
   const [skill, setSkill] = useState(initial);
   const set = (patch: Partial<Skill>) => setSkill((prev) => ({ ...prev, ...patch }));
   const setParam = (i: number, patch: Partial<SkillParam>) =>
@@ -63,6 +65,20 @@ export function SkillEditor({ skill: initial, isNew, onSave, onClose }: EditorPr
         <label>
           說明
           <input value={skill.description} onChange={(e) => set({ description: e.target.value })} />
+        </label>
+        <label>
+          分類（選填）
+          <input
+            list="skill-groups"
+            placeholder="例如：部署、報表"
+            value={skill.group ?? ""}
+            onChange={(e) => set({ group: e.target.value })}
+          />
+          <datalist id="skill-groups">
+            {groups.map((g) => (
+              <option key={g} value={g} />
+            ))}
+          </datalist>
         </label>
 
         <div className="skill-form__section">
@@ -138,7 +154,14 @@ export function SkillEditor({ skill: initial, isNew, onSave, onClose }: EditorPr
         <button
           className="button--primary"
           disabled={problem !== null}
-          onClick={() => onSave({ ...skill, name: skill.name.trim(), updatedAt: Date.now() })}
+          onClick={() =>
+            onSave({
+              ...skill,
+              name: skill.name.trim(),
+              group: skill.group?.trim() ?? "",
+              updatedAt: Date.now(),
+            })
+          }
         >
           儲存
         </button>

@@ -13,7 +13,7 @@ use tokio::sync::Mutex;
 
 use super::locator::ClaudeBinary;
 use super::process::{self, SpawnOptions};
-use super::protocol::{ControlRequest, ControlResponse, UserInput};
+use super::protocol::{ControlRequest, ControlResponse, ImageInput, UserInput};
 use crate::error::{AppError, AppResult};
 use crate::events::{self, ExitPayload, MessagePayload, StderrPayload};
 
@@ -59,8 +59,8 @@ impl SessionManager {
         Ok(())
     }
 
-    pub async fn send(&self, id: &str, text: &str) -> AppResult<()> {
-        self.write_line(id, &UserInput::text(text).to_line()?).await
+    pub async fn send(&self, id: &str, text: &str, images: &[ImageInput]) -> AppResult<()> {
+        self.write_line(id, &UserInput::new(text, images).to_line()?).await
     }
 
     pub async fn respond(&self, id: &str, request_id: &str, response: &Value) -> AppResult<()> {

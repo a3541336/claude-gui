@@ -2,6 +2,7 @@ use serde_json::Value;
 use tauri::{AppHandle, State};
 
 use crate::claude::process::SpawnOptions;
+use crate::claude::protocol::ImageInput;
 use crate::error::AppResult;
 use crate::state::{self, AppState};
 
@@ -25,8 +26,10 @@ pub async fn send_message(
     state: State<'_, AppState>,
     session_id: String,
     text: String,
+    images: Option<Vec<ImageInput>>,
 ) -> AppResult<()> {
-    state.sessions.send(&session_id, &text).await
+    let images = images.unwrap_or_default();
+    state.sessions.send(&session_id, &text, &images).await
 }
 
 /// Answers a `control_request` from claude, e.g. a permission prompt.

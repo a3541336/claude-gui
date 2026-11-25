@@ -33,7 +33,7 @@ export function ChatView({ chat, disabledReason, cwd }: Props) {
         busy={chat.state.busy}
         disabledReason={disabledReason}
         cwd={cwd}
-        onSend={(text) => void chat.send(text)}
+        onSend={(text, images) => void chat.send(text, images)}
         onStop={chat.stop}
       />
     </main>

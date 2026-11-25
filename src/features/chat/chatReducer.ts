@@ -1,5 +1,6 @@
 // Turns the stream of claude events into a flat list of chat entries.
 
+import type { ImageAttachment } from "../../shared/images";
 import type {
   AssistantLine,
   CanUseToolRequest,
@@ -20,7 +21,7 @@ export interface ToolResult {
 }
 
 export type ChatEntry =
-  | { kind: "user"; id: string; text: string }
+  | { kind: "user"; id: string; text: string; images?: ImageAttachment[] }
   | { kind: "text"; id: string; text: string }
   | { kind: "thinking"; id: string; text: string }
   | { kind: "tool"; id: string; name: string; input: Record<string, unknown>; result?: ToolResult }
@@ -61,7 +62,7 @@ export interface ChatState {
 }
 
 export type ChatAction =
-  | { type: "userSent"; text: string }
+  | { type: "userSent"; text: string; images: ImageAttachment[] }
   | { type: "line"; line: StreamLine }
   | { type: "stderr"; text: string }
   | { type: "exited"; code: number | null }
@@ -107,7 +108,15 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
         ...state,
         updatedAt: Date.now(),
         busy: true,
-        entries: [...state.entries, { kind: "user", id: newId(), text: action.text }],
+        entries: [
+          ...state.entries,
+          {
+            kind: "user",
+            id: newId(),
+            text: action.text,
+            ...(action.images.length > 0 && { images: action.images }),
+          },
+        ],
       };
     case "line":
       return applyLine(state, action.line);

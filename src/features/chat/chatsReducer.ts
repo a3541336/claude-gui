@@ -1,5 +1,6 @@
 // Every open conversation, each with its own claude process, plus which one is shown.
 
+import type { ImageAttachment } from "../../shared/images";
 import type { RateLimitEventLine, RateLimitWindows } from "../../shared/types/claude";
 import { chatReducer, createChatState, type ChatAction, type ChatSnapshot, type ChatState } from "./chatReducer";
 
@@ -8,9 +9,15 @@ export interface Conversation {
   cwd: string | null;
   chat: ChatState;
   /** Messages typed while claude was busy, sent together when the turn ends. */
-  queued: string[];
+  queued: OutgoingMessage[];
   /** Set when the turn was interrupted; the queue then waits for the next send. */
   queuePaused: boolean;
+}
+
+/** What the user sends in one go. */
+export interface OutgoingMessage {
+  text: string;
+  images: ImageAttachment[];
 }
 
 export interface ChatsState {
@@ -22,11 +29,11 @@ export interface ChatsState {
 
 export type ChatsAction =
   | { type: "chat"; id: string; action: ChatAction }
-  | { type: "sent"; id: string; text: string; cwd: string | null }
+  | { type: "sent"; id: string; message: OutgoingMessage; cwd: string | null }
   | { type: "open"; id: string; cwd?: string | null; snapshot?: ChatSnapshot }
   | { type: "activate"; id: string }
   | { type: "close"; id: string }
-  | { type: "enqueue"; id: string; text: string }
+  | { type: "enqueue"; id: string; message: OutgoingMessage }
   | { type: "unqueue"; id: string; index: number }
   | { type: "clearQueue"; id: string };
 
@@ -65,7 +72,7 @@ export function chatsReducer(state: ChatsState, action: ChatsAction): ChatsState
       return update(state, action.id, (conv) => ({
         ...conv,
         cwd: action.cwd,
-        chat: chatReducer(conv.chat, { type: "userSent", text: action.text }),
+        chat: chatReducer(conv.chat, { type: "userSent", ...action.message }),
       }));
     case "open":
       return {
@@ -83,7 +90,7 @@ export function chatsReducer(state: ChatsState, action: ChatsAction): ChatsState
       return { ...state, conversations };
     }
     case "enqueue":
-      return update(state, action.id, (conv) => ({ ...conv, queued: [...conv.queued, action.text] }));
+      return update(state, action.id, (conv) => ({ ...conv, queued: [...conv.queued, action.message] }));
     case "unqueue":
       return update(state, action.id, (conv) => {
         const queued = conv.queued.filter((_, i) => i !== action.index);

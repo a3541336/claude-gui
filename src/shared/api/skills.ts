@@ -19,6 +19,8 @@ export interface Skill {
   prompt: string;
   /** Directory of the conversation it was made from. */
   sourceCwd: string | null;
+  /** Category shown as a group in the sidebar; empty is ungrouped. Missing in older saves. */
+  group?: string;
   /** In ms. */
   updatedAt: number;
 }
@@ -38,5 +40,7 @@ export const skillsApi = {
   list: () => invoke<Skill[]>("list_skills"),
   save: (skill: Skill) => invoke<void>("save_skill", { skill }),
   delete: (id: string) => invoke<void>("delete_skill", { id }),
+  /** Saves the order the skills are listed in. */
+  reorder: (ids: string[]) => invoke<void>("reorder_skills", { ids }),
   askStructured: <T>(query: StructuredQuery) => invoke<T>("ask_structured", { query }),
 };

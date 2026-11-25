@@ -18,6 +18,8 @@ pub enum AppError {
     SessionExists(String),
     #[error("不是資料夾：{0}")]
     NotADirectory(String),
+    #[error("檔案太大：{0}")]
+    FileTooLarge(String),
     #[error("無效的對話紀錄 id：{0}")]
     InvalidHistoryId(String),
     #[error(transparent)]

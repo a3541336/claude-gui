@@ -108,7 +108,8 @@ function sortItems(items: ConversationMeta[]): ConversationMeta[] {
 function titleOf(entries: ChatEntry[]): string {
   const first = entries.find((e) => e.kind === "user");
   const line = first?.text.trim().split("\n")[0] ?? "";
-  return line.length > 60 ? `${line.slice(0, 60)}…` : line || "（無標題）";
+  const fallback = first?.kind === "user" && first.images?.length ? "（圖片）" : "（無標題）";
+  return line.length > 60 ? `${line.slice(0, 60)}…` : line || fallback;
 }
 
 export type HistoryController = ReturnType<typeof useHistory>;

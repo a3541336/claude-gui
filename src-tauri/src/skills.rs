@@ -33,6 +33,9 @@ pub struct Skill {
     pub prompt: String,
     /// Directory of the conversation it was made from, offered when running it.
     pub source_cwd: Option<String>,
+    /// Category shown as a group in the sidebar; empty is ungrouped.
+    #[serde(default)]
+    pub group: String,
     /// In ms since the epoch.
     pub updated_at: u64,
 }
@@ -51,19 +54,29 @@ impl SkillStore {
         }
     }
 
-    /// Most recently updated first.
+    /// In the order the user arranged them; new skills come first.
     pub async fn list(&self) -> AppResult<Vec<Skill>> {
         let mut slot = self.skills.lock().await;
         Ok(self.loaded(&mut slot).await?.clone())
     }
 
-    /// Adds the skill, or replaces the one with the same id.
+    /// Replaces the skill with the same id in place, or adds it at the top.
     pub async fn save(&self, skill: Skill) -> AppResult<()> {
         let mut slot = self.skills.lock().await;
         let skills = self.loaded(&mut slot).await?;
-        skills.retain(|s| s.id != skill.id);
-        skills.push(skill);
-        skills.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+        match skills.iter_mut().find(|s| s.id == skill.id) {
+            Some(existing) => *existing = skill,
+            None => skills.insert(0, skill),
+        }
+        write_json(&self.path, skills).await
+    }
+
+    /// Orders the skills as `ids`; any not listed keep their relative order after them.
+    pub async fn reorder(&self, ids: &[String]) -> AppResult<()> {
+        let mut slot = self.skills.lock().await;
+        let skills = self.loaded(&mut slot).await?;
+        let rank = |s: &Skill| ids.iter().position(|id| *id == s.id).unwrap_or(ids.len());
+        skills.sort_by_key(rank);
         write_json(&self.path, skills).await
     }
 

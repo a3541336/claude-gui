@@ -21,6 +21,12 @@ pub async fn delete_skill(store: State<'_, SkillStore>, id: String) -> AppResult
     store.delete(&id).await
 }
 
+/// Puts the skills in the order of `ids`; skills missing from it keep their place at the end.
+#[tauri::command]
+pub async fn reorder_skills(store: State<'_, SkillStore>, ids: Vec<String>) -> AppResult<()> {
+    store.reorder(&ids).await
+}
+
 /// Asks claude one question and returns its answer as JSON matching `query.schema`.
 #[tauri::command]
 pub async fn ask_structured(

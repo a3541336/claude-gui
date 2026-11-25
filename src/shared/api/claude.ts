@@ -3,6 +3,7 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import type { ImageAttachment } from "../images";
 import type { PermissionMode, PermissionResponse, StreamLine } from "../types/claude";
 
 export interface ClaudeInfo {
@@ -43,8 +44,12 @@ export const claudeApi = {
 
   startSession: (sessionId: string, options: SpawnOptions) =>
     invoke<void>("start_session", { sessionId, options }),
-  sendMessage: (sessionId: string, text: string) =>
-    invoke<void>("send_message", { sessionId, text }),
+  sendMessage: (sessionId: string, text: string, images: ImageAttachment[] = []) =>
+    invoke<void>("send_message", {
+      sessionId,
+      text,
+      images: images.map(({ mediaType, data }) => ({ mediaType, data })),
+    }),
   respondToRequest: (sessionId: string, requestId: string, response: PermissionResponse) =>
     invoke<void>("respond_to_request", { sessionId, requestId, response }),
   /** Switches a running process's mode at once; resolves with the control request id. */
